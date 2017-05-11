@@ -62,6 +62,8 @@ func (s *CacheServer) Add(ctx context.Context, in *pb.AddRequest) (*pb.AddReply,
 
 // Get gets an item from the cache. Check `Found` to see if the value was availa ble.
 func (s *CacheServer) Get(ctx context.Context, in *pb.GetRequest) (*pb.GetReply, error) {
+	s.m.Lock()
+	defer s.m.Unlock()
 	if v, ok := s.c.Get(in.Key); ok == true {
 		return &pb.GetReply{Ok: ok, Key: in.Key, Value: v.([]byte)}, nil
 	}
