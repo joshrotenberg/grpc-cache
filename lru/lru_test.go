@@ -19,7 +19,7 @@ func TestBasic(t *testing.T) {
 
 	// add the same key, it shouldn't replace the old value since it already exists
 	err := c.Add("foo", "notbar", 0)
-	if err != Exists {
+	if err != ErrExists {
 		t.Fatal("expected an Exists error")
 	}
 	if v, err := c.Get("foo"); err == nil {
@@ -41,10 +41,10 @@ func TestBasic(t *testing.T) {
 
 	// try to replace something that doesn't exist, it shouldn't add anything
 	err = c.Replace("yuk", "doesn'tmatter", 0)
-	if err != NotFound {
+	if err != ErrNotFound {
 		t.Fatal("should have gotten a NotFound error from Replace")
 	}
-	if v, err := c.Get("yuk"); err != NotFound {
+	if v, err := c.Get("yuk"); err != ErrNotFound {
 		t.Fatalf("yuk shouldn't be there but it was %s", v)
 	}
 
@@ -62,19 +62,19 @@ func TestBasic(t *testing.T) {
 		t.Fatal("Add returned an error")
 	}
 
-	if v, err := c.Get("foo"); err != NotFound {
+	if v, err := c.Get("foo"); err != ErrNotFound {
 		t.Fatalf("'foo' should be gone now but it still returned a value: %s", v)
 	}
 
 	c.Delete("bar")
-	if v, err := c.Get("bar"); err != NotFound {
+	if v, err := c.Get("bar"); err != ErrNotFound {
 		t.Fatalf("'bar' should have been deleted: %s", v)
 	}
 
 	// clear the entire cache
 	c.FlushAll()
-	if v, err := c.Get("thing"); err != NotFound {
-		t.Fatalf("all items should have been flushed but found: %", v)
+	if v, err := c.Get("thing"); err != ErrNotFound {
+		t.Fatalf("all items should have been flushed but found: %s", v)
 	}
 }
 
@@ -101,7 +101,7 @@ func TestCAS(t *testing.T) {
 
 	// set something new using the wrong cas value, should fail
 	err = c.Cas("castest", "nope", 0, 100)
-	if err != Exists {
+	if err != ErrExists {
 		t.Fatal(err)
 	}
 
@@ -127,12 +127,12 @@ func TestTTL(t *testing.T) {
 	c.Set("foo", []byte("bar"), time.Second*2)
 	time.Sleep(time.Second * 1)
 
-	if _, err := c.Get("foo"); err == NotFound {
+	if _, err := c.Get("foo"); err == ErrNotFound {
 		t.Fatal("'foo' should still be there")
 	}
 
 	time.Sleep(time.Second * 1)
-	if _, err := c.Get("foo"); err != NotFound {
+	if _, err := c.Get("foo"); err != ErrNotFound {
 		t.Fatal("'foo' should have expired")
 	}
 

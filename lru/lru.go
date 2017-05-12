@@ -15,7 +15,7 @@ type Cache struct {
 
 	ll    *list.List
 	cache map[interface{}]*list.Element
-	casId uint64
+	casID uint64
 }
 
 type entry struct {
@@ -26,8 +26,11 @@ type entry struct {
 	createdAt time.Time
 }
 
-var NotFound = errors.New("item not found")
-var Exists = errors.New("item exists")
+// ErrNotFound is the error returned when a value isn't found.
+var ErrNotFound = errors.New("item not found")
+
+// ErrExists is the error returned when an item exists.
+var ErrExists = errors.New("item exists")
 
 // New creates a new Cache and initializes the various internal items. You *must*
 // call this first.
@@ -36,7 +39,7 @@ func New(maxEntries int) *Cache {
 		MaxEntries: maxEntries,
 		ll:         list.New(),
 		cache:      make(map[interface{}]*list.Element),
-		casId:      0,
+		casID:      0,
 	}
 }
 
@@ -48,7 +51,7 @@ func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
 		ee.Value.(*entry).value = value
 		ee.Value.(*entry).ttl = ttl
 		ee.Value.(*entry).createdAt = time.Now()
-		ee.Value.(*entry).cas = c.nextCasId()
+		ee.Value.(*entry).cas = c.nextCasID()
 		return
 	}
 	ele := c.ll.PushFront(&entry{
@@ -56,7 +59,7 @@ func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
 		value:     value,
 		ttl:       ttl,
 		createdAt: time.Now(),
-		cas:       c.nextCasId(),
+		cas:       c.nextCasID(),
 	})
 	c.cache[key] = ele
 	if c.MaxEntries != 0 && c.ll.Len() > c.MaxEntries {
@@ -73,7 +76,7 @@ func (c *Cache) Add(key string, value interface{}, ttl time.Duration) error {
 		c.Set(key, value, ttl)
 		return nil
 	}
-	return Exists
+	return ErrExists
 }
 
 // Replace only sets the item if it does already exist.
@@ -82,7 +85,7 @@ func (c *Cache) Replace(key string, value interface{}, ttl time.Duration) error 
 		c.Set(key, value, ttl)
 		return nil
 	}
-	return NotFound
+	return ErrNotFound
 }
 
 // Cas is a "compare and swap" or "check and set" operation. It attempts to set
@@ -95,9 +98,9 @@ func (c *Cache) Cas(key string, value interface{}, ttl time.Duration, cas uint64
 			c.Set(key, value, ttl)
 			return nil
 		}
-		return Exists
+		return ErrExists
 	}
-	return NotFound
+	return ErrNotFound
 }
 
 func (c *Cache) getElement(key string) *list.Element {
@@ -118,15 +121,16 @@ func (c *Cache) Get(key string) (interface{}, error) {
 	if ele != nil {
 		return ele.Value.(*entry).value, nil
 	}
-	return nil, NotFound
+	return nil, ErrNotFound
 }
 
+// Gets gets the value for the given key and also returns the value's CAS ID.
 func (c *Cache) Gets(key string) (interface{}, uint64, error) {
 	ele := c.getElement(key)
 	if ele != nil {
 		return ele.Value.(*entry).value, ele.Value.(*entry).cas, nil
 	}
-	return nil, 0, NotFound
+	return nil, 0, ErrNotFound
 }
 
 // Delete an item from the cache
@@ -142,9 +146,9 @@ func (c *Cache) FlushAll() {
 	c.cache = nil
 }
 
-func (c *Cache) nextCasId() uint64 {
-	c.casId++
-	return c.casId
+func (c *Cache) nextCasID() uint64 {
+	c.casID++
+	return c.casID
 }
 
 func isExpired(e *list.Element) bool {
