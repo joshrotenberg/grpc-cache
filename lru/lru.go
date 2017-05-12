@@ -2,13 +2,12 @@ package lru
 
 import (
 	"container/list"
+	"errors"
 	"log"
-	"sync"
 	"time"
 )
 
-// based on groupcache/lru but with internal locking, ttl support,
-// and byte key/values
+// based on groupcache/lru but with more memcached-like semantics
 
 // Cache is an LRU+TTL cache
 type Cache struct {
@@ -16,44 +15,40 @@ type Cache struct {
 
 	ll    *list.List
 	cache map[interface{}]*list.Element
-	mutex *sync.Mutex
 	casId uint64
 }
 
 type entry struct {
 	key       string
-	value     []byte
+	value     interface{}
 	cas       uint64
 	ttl       time.Duration
 	createdAt time.Time
 }
 
+var NotFound = errors.New("item not found")
+var Exists = errors.New("item exists")
+
 // New creates a new Cache and initializes the various internal items. You *must*
 // call this first.
 func New(maxEntries int) *Cache {
-	var x uint64 = 0
-	log.Println(x)
 	return &Cache{
 		MaxEntries: maxEntries,
 		ll:         list.New(),
 		cache:      make(map[interface{}]*list.Element),
-		mutex:      &sync.Mutex{},
 		casId:      0,
 	}
 }
 
 // Set unconditionally sets the item, potentially overwriting a previous value
 // and moving the item to the top of the LRU.
-func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	c.casId++
+func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
 	if ee, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(ee)
 		ee.Value.(*entry).value = value
 		ee.Value.(*entry).ttl = ttl
 		ee.Value.(*entry).createdAt = time.Now()
-		ee.Value.(*entry).cas = c.casId
+		ee.Value.(*entry).cas = c.nextCasId()
 		return
 	}
 	ele := c.ll.PushFront(&entry{
@@ -61,72 +56,98 @@ func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 		value:     value,
 		ttl:       ttl,
 		createdAt: time.Now(),
-		cas:       c.casId,
+		cas:       c.nextCasId(),
 	})
 	c.cache[key] = ele
 	if c.MaxEntries != 0 && c.ll.Len() > c.MaxEntries {
-		c.RemoveOldest()
+		ele := c.ll.Back()
+		if ele != nil {
+			c.removeElement(ele)
+		}
 	}
 }
 
 // Add sets the item only if it doesn't already exist.
-func (c *Cache) Add(key string, value []byte, ttl time.Duration) {
+func (c *Cache) Add(key string, value interface{}, ttl time.Duration) error {
 	if _, ok := c.cache[key]; !ok {
 		c.Set(key, value, ttl)
+		return nil
 	}
-	return
+	return Exists
 }
 
 // Replace only sets the item if it does already exist.
-func (c *Cache) Replace(key string, value []byte, ttl time.Duration) {
+func (c *Cache) Replace(key string, value interface{}, ttl time.Duration) error {
 	if _, ok := c.cache[key]; ok {
 		c.Set(key, value, ttl)
+		return nil
 	}
-	return
+	return NotFound
+}
+
+// Cas is a "compare and swap" or "check and set" operation. It attempts to set
+// the key/value pair if a) the item already exists in the cache and
+// b) the item's current cas value matches the supplied argument. If the item doesn't exist,
+// it returns NotFound, and if the item exists but has a different cas value, it returns Exists.
+func (c *Cache) Cas(key string, value interface{}, ttl time.Duration, cas uint64) error {
+	if ele, ok := c.cache[key]; ok {
+		if ele.Value.(*entry).cas == cas {
+			c.Set(key, value, ttl)
+			return nil
+		}
+		return Exists
+	}
+	return NotFound
+}
+
+func (c *Cache) getElement(key string) *list.Element {
+	if ele, hit := c.cache[key]; hit {
+		if isExpired(ele) {
+			c.removeElement(ele)
+			return nil
+		}
+		c.ll.MoveToFront(ele)
+		return ele
+	}
+	return nil
 }
 
 // Get gets the value for the given key.
-func (c *Cache) Get(key string) ([]byte, bool) {
-	if ele, hit := c.cache[key]; hit {
-		c.mutex.Lock()
-		defer c.mutex.Unlock()
-		if isExpired(ele) {
-			c.removeElement(ele)
-			return nil, false
-		}
-		c.ll.MoveToFront(ele)
-		return ele.Value.(*entry).value, true
+func (c *Cache) Get(key string) (interface{}, error) {
+	ele := c.getElement(key)
+	if ele != nil {
+		return ele.Value.(*entry).value, nil
 	}
-	return nil, false
+	return nil, NotFound
+}
+
+func (c *Cache) Gets(key string) (interface{}, uint64, error) {
+	ele := c.getElement(key)
+	if ele != nil {
+		return ele.Value.(*entry).value, ele.Value.(*entry).cas, nil
+	}
+	return nil, 0, NotFound
 }
 
 // Delete an item from the cache
 func (c *Cache) Delete(key string) {
-	c.mutex.Lock()
 	if ele, hit := c.cache[key]; hit {
 		c.removeElement(ele)
 	}
-	c.mutex.Unlock()
 }
 
 // FlushAll removes all items from the cache.
 func (c *Cache) FlushAll() {
-	c.mutex.Lock()
 	c.ll = nil
 	c.cache = nil
-	c.mutex.Unlock()
 }
 
-// RemoveOldest removes the oldest item from the cache.
-func (c *Cache) RemoveOldest() {
-	ele := c.ll.Back()
-	if ele != nil {
-		c.removeElement(ele)
-	}
+func (c *Cache) nextCasId() uint64 {
+	c.casId++
+	return c.casId
 }
 
 func isExpired(e *list.Element) bool {
-
 	ttl := e.Value.(*entry).ttl
 	if ttl == 0 {
 		return false
