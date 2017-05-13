@@ -1,17 +1,51 @@
-// Package lru implements an LRU+TTL caching library that (mostly) follows the
-// functions offered by memcached. It was initially based on groupcache/lru and
-// evolved into a more fully featured library to support the back end caching
-// needs of grpc-cache. Cache items are keyed with strings and valued with
-// []byte. While interface{} values might be a bit more flexible, []byte was
-// chosen for a few reasons. First, []byte aligns better with protobuf's byte
-// type, though this library should be useful outside of that context. Second,
-// it's relatively easy to encode/decode Go types into a []byte, and in fact
-// common complex encoded types in Go use []byte natively (encoding/json,
-// encoding/gob, etc). Third, the update functions (Increment/Decrement and
-// Append/Prepend) are easier to write and test without resorting to
-// reflection. For convenience, helpers are provided for encoding and decoding
-// uint64 to/from []byte for counters.
+/*
 
+Package lru implements an LRU+TTL caching library that (mostly) follows the
+functions offered by memcached. It was initially based on groupcache/lru and
+evolved into a more fully featured library to support the back end caching
+needs of grpc-cache. Cache items are keyed with strings and valued with
+[]byte. While interface{} values might be a bit more flexible, []byte was
+chosen for a few reasons. First, []byte aligns better with protobuf's byte
+type, though this library should be useful outside of that context. Second,
+it's relatively easy to encode/decode Go types into a []byte, and in fact
+common complex encoded types in Go use []byte natively (encoding/json,
+encoding/gob, etc). Third, the update functions (Increment/Decrement and
+Append/Prepend) are easier to write and test without resorting to
+reflection. For convenience, helpers are provided for encoding and decoding
+uint64 to/from []byte for counters.
+
+This library employs two cache strategies: Least Recently Used (LRU) and Time
+To Live. LRU can be disabled globally by setting the maxEntries to 0:
+
+		myCache := lru.New(0)
+
+TTL can be disabled on a per item basis by setting the ttl argument in the
+various set commands to 0: Otherwise, items will expire when the time.Duration
+
+		myCache.Set("blah", []byte("whatever"), time.Minutes*20)
+
+has been reached and the item is accessed again ... note that timeouts are
+lazy, so items that are set and have timed out but aren't accessed will count
+towards the LRU max.
+
+Note that this library is not thread safe. Locking has been left up to the
+caller. This allows, for exammple, more efficient batch operations because the
+library functions operate on a single value, but the caller could lock around a
+set of operations. In addition, it allows the caller to use their preferred
+method for assuring safe concurrent access. And finally, if the library is used
+in a single-threaded situation, locking unecessary locking won't needlessly
+impact performance. All that said, the Cache type conveniently embeds
+sync.Mutex so that a per instance lock is easy to use:
+
+		myCache.Lock()
+		myCache.Set("thing", []byte("stuff"), 0)
+		myCache.Unlock()
+
+Note also that all operations read from and potentially write to internal data
+structures, so locking in a concurrent environment is necessary, even for
+Get/Gets.
+
+*/
 package lru
 
 import (
