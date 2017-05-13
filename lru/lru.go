@@ -75,6 +75,7 @@ type entry struct {
 	createdAt time.Time
 }
 
+// EvictionReason encapsulates the reason for an eviction in an evictionHandler
 type EvictionReason int
 
 func (e EvictionReason) String() string {
@@ -88,7 +89,9 @@ func (e EvictionReason) String() string {
 }
 
 const (
+	// LRUEviction denotes an item was evicted via LRU
 	LRUEviction = iota
+	// TTLEviction denotes an item was evicted via TTL
 	TTLEviction
 )
 

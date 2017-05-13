@@ -140,11 +140,11 @@ func TestPrependAppend(t *testing.T) {
 
 	err = c.Prepend("yuk", []byte("things"), 0)
 	if err != nil {
-		t.Fatal("got an error trying to prepend")
+		t.Fatalf("got an error trying to prepend")
 	}
 
 	if v, err := c.Get("yuk"); err != nil || bytes.Compare(v, []byte("thingswoof")) != 0 {
-		t.Fatal("prepend failed: %s %s", v, err)
+		t.Fatalf("prepend failed: %s %s", v, err)
 	}
 }
 
@@ -180,7 +180,10 @@ func TestEvictionHandler(t *testing.T) {
 		t.Fatal("expected 'first' to get evicted via LRU")
 	}
 	// call Get to force a ttl eviction
-	c.Get("second")
+	v, err := c.Get("second")
+	if err != ErrNotFound {
+		t.Fatalf("found 'second', it should have been evicted: %s %s", err, v)
+	}
 	if x != "second" {
 		t.Fatal("expected 'second' to get evicted via TTL")
 	}
@@ -219,7 +222,7 @@ func TestIncrementDecrement(t *testing.T) {
 	// convert the value
 	y, err := BytesToUint64(v)
 	if err != nil {
-		t.Fatal("error converting bytes to uint64: %s", err)
+		t.Fatalf("error converting bytes to uint64: %s", err)
 	}
 
 	// and make sure it incremented
@@ -242,7 +245,7 @@ func TestIncrementDecrement(t *testing.T) {
 	// convert the value
 	z, err := BytesToUint64(x)
 	if err != nil {
-		t.Fatal("error converting bytes to uint64: %s", err)
+		t.Fatalf("error converting bytes to uint64: %s", err)
 	}
 
 	// and make sure it decremented
