@@ -1,26 +1,29 @@
 package lru
 
 import (
+	"bytes"
 	"container/list"
+	"encoding/binary"
 	"errors"
-	"log"
+	"sync"
 	"time"
 )
 
-// based on groupcache/lru but with more memcached-like semantics
+// on groupcache/lru but with more memcached-like semantics
 
 // Cache is an LRU+TTL cache
 type Cache struct {
+	sync.Mutex
 	MaxEntries int
 
 	ll    *list.List
-	cache map[interface{}]*list.Element
+	cache map[string]*list.Element
 	casID uint64
 }
 
 type entry struct {
 	key       string
-	value     interface{}
+	value     []byte
 	cas       uint64
 	ttl       time.Duration
 	createdAt time.Time
@@ -32,20 +35,19 @@ var ErrNotFound = errors.New("item not found")
 // ErrExists is the error returned when an item exists.
 var ErrExists = errors.New("item exists")
 
-// New creates a new Cache and initializes the various internal items. You *must*
-// call this first.
+// New creates a new Cache and initializes the various internal items.
 func New(maxEntries int) *Cache {
 	return &Cache{
 		MaxEntries: maxEntries,
 		ll:         list.New(),
-		cache:      make(map[interface{}]*list.Element),
+		cache:      make(map[string]*list.Element),
 		casID:      0,
 	}
 }
 
 // Set unconditionally sets the item, potentially overwriting a previous value
 // and moving the item to the top of the LRU.
-func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
+func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 	if ee, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(ee)
 		ee.Value.(*entry).value = value
@@ -71,7 +73,7 @@ func (c *Cache) Set(key string, value interface{}, ttl time.Duration) {
 }
 
 // Add sets the item only if it doesn't already exist.
-func (c *Cache) Add(key string, value interface{}, ttl time.Duration) error {
+func (c *Cache) Add(key string, value []byte, ttl time.Duration) error {
 	if _, ok := c.cache[key]; !ok {
 		c.Set(key, value, ttl)
 		return nil
@@ -80,7 +82,7 @@ func (c *Cache) Add(key string, value interface{}, ttl time.Duration) error {
 }
 
 // Replace only sets the item if it does already exist.
-func (c *Cache) Replace(key string, value interface{}, ttl time.Duration) error {
+func (c *Cache) Replace(key string, value []byte, ttl time.Duration) error {
 	if _, ok := c.cache[key]; ok {
 		c.Set(key, value, ttl)
 		return nil
@@ -92,7 +94,7 @@ func (c *Cache) Replace(key string, value interface{}, ttl time.Duration) error 
 // the key/value pair if a) the item already exists in the cache and
 // b) the item's current cas value matches the supplied argument. If the item doesn't exist,
 // it returns NotFound, and if the item exists but has a different cas value, it returns Exists.
-func (c *Cache) Cas(key string, value interface{}, ttl time.Duration, cas uint64) error {
+func (c *Cache) Cas(key string, value []byte, ttl time.Duration, cas uint64) error {
 	if ele, ok := c.cache[key]; ok {
 		if ele.Value.(*entry).cas == cas {
 			c.Set(key, value, ttl)
@@ -116,7 +118,7 @@ func (c *Cache) getElement(key string) *list.Element {
 }
 
 // Get gets the value for the given key.
-func (c *Cache) Get(key string) (interface{}, error) {
+func (c *Cache) Get(key string) ([]byte, error) {
 	ele := c.getElement(key)
 	if ele != nil {
 		return ele.Value.(*entry).value, nil
@@ -125,7 +127,7 @@ func (c *Cache) Get(key string) (interface{}, error) {
 }
 
 // Gets gets the value for the given key and also returns the value's CAS ID.
-func (c *Cache) Gets(key string) (interface{}, uint64, error) {
+func (c *Cache) Gets(key string) ([]byte, uint64, error) {
 	ele := c.getElement(key)
 	if ele != nil {
 		return ele.Value.(*entry).value, ele.Value.(*entry).cas, nil
@@ -133,7 +135,91 @@ func (c *Cache) Gets(key string) (interface{}, uint64, error) {
 	return nil, 0, ErrNotFound
 }
 
-// Delete an item from the cache
+// Append appends the given value to the currently stored value for the key. If
+// the key doesn't currently exist (or has aged out) ErrNotFound is returned.
+func (c *Cache) Append(key string, value []byte, ttl time.Duration) error {
+	ele := c.getElement(key)
+	if ele != nil {
+		newValue := append(ele.Value.(*entry).value, value...)
+		c.Set(key, newValue, ttl)
+		return nil
+	}
+	return ErrNotFound
+}
+
+// Prepend prepends the given value to the currently stored value for the key. If
+// the key doesn't currently exist (or has aged out) ErrNotFound is returned.
+func (c *Cache) Prepend(key string, value []byte, ttl time.Duration) error {
+	ele := c.getElement(key)
+	if ele != nil {
+		newValue := append(value, ele.Value.(*entry).value...)
+		c.Set(key, newValue, ttl)
+		return nil
+	}
+	return ErrNotFound
+}
+
+// BytesToUint64 is a helper to convert a byte slice to a uint64.
+func BytesToUint64(b []byte) (uint64, error) {
+	y, err := binary.ReadUvarint(bytes.NewReader(b))
+	if err != nil {
+		return 0, err
+	}
+	return y, nil
+}
+
+// Uint64ToBytes is a helper to convert a uint64 to a byte slice.
+func Uint64ToBytes(n uint64) []byte {
+	buf := make([]byte, binary.MaxVarintLen64)
+	binary.PutUvarint(buf, n)
+	return buf
+}
+
+// Increment increments the value of key by incrBy. The value should be stored
+// as a uint64 converted to a []byte with Uint64ToBytes (or something
+// equivalent) or the behavior is undefined.
+func (c *Cache) Increment(key string, incrBy uint64) error {
+	ele := c.getElement(key)
+	if ele != nil {
+		n, err := BytesToUint64(ele.Value.(*entry).value)
+		if err != nil {
+			return err
+		}
+
+		n += incrBy
+
+		b := Uint64ToBytes(n)
+		ele.Value.(*entry).value = b
+		ele.Value.(*entry).cas = c.nextCasID()
+		return nil
+
+	}
+	return ErrNotFound
+}
+
+// Decrement decrements the value of key by incrBy. The value should be stored
+// as a uint64 converted to a []byte with Uint64ToBytes (or something
+// equivalent) or the behavior is undefined.
+func (c *Cache) Decrement(key string, incrBy uint64) error {
+	ele := c.getElement(key)
+	if ele != nil {
+		n, err := BytesToUint64(ele.Value.(*entry).value)
+		if err != nil {
+			return err
+		}
+
+		n -= incrBy
+
+		b := Uint64ToBytes(n)
+		ele.Value.(*entry).value = b
+		ele.Value.(*entry).cas = c.nextCasID()
+		return nil
+
+	}
+	return ErrNotFound
+}
+
+// Delete deletes the item from the cache.
 func (c *Cache) Delete(key string) {
 	if ele, hit := c.cache[key]; hit {
 		c.removeElement(ele)
@@ -159,7 +245,6 @@ func isExpired(e *list.Element) bool {
 
 	createdAt := e.Value.(*entry).createdAt
 	if time.Since(createdAt) > ttl {
-		log.Println(time.Since(createdAt))
 		return true
 	}
 	return false
