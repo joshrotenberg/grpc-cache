@@ -1,3 +1,17 @@
+// Package lru implements an LRU+TTL caching library that (mostly) follows the
+// functions offered by memcached. It was initially based on groupcache/lru and
+// evolved into a more fully featured library to support the back end caching
+// needs of grpc-cache. Cache items are keyed with strings and valued with
+// []byte. While interface{} values might be a bit more flexible, []byte was
+// chosen for a few reasons. First, []byte aligns better with protobuf's byte
+// type, though this library should be useful outside of that context. Second,
+// it's relatively easy to encode/decode Go types into a []byte, and in fact
+// common complex encoded types in Go use []byte natively (encoding/json,
+// encoding/gob, etc). Third, the update functions (Increment/Decrement and
+// Append/Prepend) are easier to write and test without resorting to
+// reflection. For convenience, helpers are provided for encoding and decoding
+// uint64 to/from []byte for counters.
+
 package lru
 
 import (
@@ -8,8 +22,6 @@ import (
 	"sync"
 	"time"
 )
-
-// on groupcache/lru but with more memcached-like semantics
 
 // Cache is an LRU+TTL cache
 type Cache struct {
