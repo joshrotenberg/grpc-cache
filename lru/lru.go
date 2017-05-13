@@ -60,11 +60,10 @@ import (
 // Cache is an LRU+TTL cache
 type Cache struct {
 	sync.Mutex
-	MaxEntries int
-
-	ll    *list.List
-	cache map[string]*list.Element
-	casID uint64
+	maxEntries int
+	ll         *list.List
+	cache      map[string]*list.Element
+	casID      uint64
 }
 
 type entry struct {
@@ -84,7 +83,7 @@ var ErrExists = errors.New("item exists")
 // New creates a new Cache and initializes the various internal items.
 func New(maxEntries int) *Cache {
 	return &Cache{
-		MaxEntries: maxEntries,
+		maxEntries: maxEntries,
 		ll:         list.New(),
 		cache:      make(map[string]*list.Element),
 		casID:      0,
@@ -94,6 +93,7 @@ func New(maxEntries int) *Cache {
 // Set unconditionally sets the item, potentially overwriting a previous value
 // and moving the item to the top of the LRU.
 func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
+	// key already exists, update values and move to the front
 	if ee, ok := c.cache[key]; ok {
 		c.ll.MoveToFront(ee)
 		ee.Value.(*entry).value = value
@@ -102,6 +102,7 @@ func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 		ee.Value.(*entry).cas = c.nextCasID()
 		return
 	}
+	// new entry: create, store and update the LRU
 	ele := c.ll.PushFront(&entry{
 		key:       key,
 		value:     value,
@@ -110,7 +111,7 @@ func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 		cas:       c.nextCasID(),
 	})
 	c.cache[key] = ele
-	if c.MaxEntries != 0 && c.ll.Len() > c.MaxEntries {
+	if c.maxEntries != 0 && c.ll.Len() > c.maxEntries {
 		ele := c.ll.Back()
 		if ele != nil {
 			c.removeElement(ele)
@@ -151,6 +152,8 @@ func (c *Cache) Cas(key string, value []byte, ttl time.Duration, cas uint64) err
 	return ErrNotFound
 }
 
+// getElement gets the raw cache entry from the map if it both exists and has
+// not yet expired
 func (c *Cache) getElement(key string) *list.Element {
 	if ele, hit := c.cache[key]; hit {
 		if isExpired(ele) {
@@ -278,11 +281,13 @@ func (c *Cache) FlushAll() {
 	c.cache = nil
 }
 
+// nextCasId increments and returns the next cas id.
 func (c *Cache) nextCasID() uint64 {
 	c.casID++
 	return c.casID
 }
 
+// isExpired returns true if the item exists and is expired, false otherwise.
 func isExpired(e *list.Element) bool {
 	ttl := e.Value.(*entry).ttl
 	if ttl == 0 {
@@ -296,6 +301,7 @@ func isExpired(e *list.Element) bool {
 	return false
 }
 
+// removeElement unconditionally removed the element from the cache.
 func (c *Cache) removeElement(e *list.Element) {
 	c.ll.Remove(e)
 	kv := e.Value.(*entry)
