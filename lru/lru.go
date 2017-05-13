@@ -127,7 +127,8 @@ func New(maxEntries int) *Cache {
 }
 
 // WithEvictionHandler attaches a callback that will be called whenever an item
-// is evicted from the cache.
+// is evicted from the cache. Note that this will be called for LRU or TTL
+// evictions but not for explicit calls to Delete.
 func (c *Cache) WithEvictionHandler(h EvictionHandler) *Cache {
 	c.evictionHandler = h
 	return c
