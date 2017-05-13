@@ -60,10 +60,11 @@ import (
 // Cache is an LRU+TTL cache
 type Cache struct {
 	sync.Mutex
-	maxEntries int
-	ll         *list.List
-	cache      map[string]*list.Element
-	casID      uint64
+	maxEntries      int
+	evictionHandler EvictionHandler
+	ll              *list.List
+	cache           map[string]*list.Element
+	casID           uint64
 }
 
 type entry struct {
@@ -72,6 +73,38 @@ type entry struct {
 	cas       uint64
 	ttl       time.Duration
 	createdAt time.Time
+}
+
+type EvictionReason int
+
+func (e EvictionReason) String() string {
+	switch e {
+	case LRUEviction:
+		return "LRUEviction"
+	case TTLEviction:
+		return "TTLEviction"
+	}
+	return ""
+}
+
+const (
+	LRUEviction = iota
+	TTLEviction
+)
+
+// EvictionHandler is an interface for implementing a function to be called
+// when an item is evicted from the cache.
+type EvictionHandler interface {
+	HandleEviction(key string, value []byte, reason EvictionReason)
+}
+
+// EvictionHandlerFunc is a convenience type for for EvictionHandler
+// implementations.
+type EvictionHandlerFunc func(key string, value []byte, reason EvictionReason)
+
+// HandleEviction implements the EvictionHandler interface.
+func (h EvictionHandlerFunc) HandleEviction(key string, value []byte, reason EvictionReason) {
+	h(key, value, reason)
 }
 
 // ErrNotFound is the error returned when a value isn't found.
@@ -88,6 +121,13 @@ func New(maxEntries int) *Cache {
 		cache:      make(map[string]*list.Element),
 		casID:      0,
 	}
+}
+
+// WithEvictionHandler attaches a callback that will be called whenever an item
+// is evicted from the cache.
+func (c *Cache) WithEvictionHandler(h EvictionHandler) *Cache {
+	c.evictionHandler = h
+	return c
 }
 
 // Set unconditionally sets the item, potentially overwriting a previous value
@@ -114,6 +154,9 @@ func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 	if c.maxEntries != 0 && c.ll.Len() > c.maxEntries {
 		ele := c.ll.Back()
 		if ele != nil {
+			if c.evictionHandler != nil {
+				c.evictionHandler.HandleEviction(ele.Value.(*entry).key, ele.Value.(*entry).value, LRUEviction)
+			}
 			c.removeElement(ele)
 		}
 	}
@@ -157,6 +200,9 @@ func (c *Cache) Cas(key string, value []byte, ttl time.Duration, cas uint64) err
 func (c *Cache) getElement(key string) *list.Element {
 	if ele, hit := c.cache[key]; hit {
 		if isExpired(ele) {
+			if c.evictionHandler != nil {
+				c.evictionHandler.HandleEviction(ele.Value.(*entry).key, ele.Value.(*entry).value, TTLEviction)
+			}
 			c.removeElement(ele)
 			return nil
 		}

@@ -164,7 +164,26 @@ func TestScratch(t *testing.T) {
 	c := New(2)
 	c.Lock()
 	c.Unlock()
+}
 
+func TestEvictionHandler(t *testing.T) {
+	var x string
+	c := New(2).WithEvictionHandler(EvictionHandlerFunc(func(key string, value []byte, reason EvictionReason) {
+		t.Logf("evicted %s: %s", key, reason)
+		x = key
+	}))
+
+	c.Set("first", []byte("gets evicted"), 0)
+	c.Set("second", []byte("val"), time.Nanosecond*1)
+	c.Set("third", []byte("val"), 0)
+	if x != "first" {
+		t.Fatal("expected 'first' to get evicted via LRU")
+	}
+	// call Get to force a ttl eviction
+	c.Get("second")
+	if x != "second" {
+		t.Fatal("expected 'second' to get evicted via TTL")
+	}
 }
 
 func TestBytesToUint64ToBytes(t *testing.T) {
@@ -246,5 +265,4 @@ func TestTTL(t *testing.T) {
 	if _, err := c.Get("foo"); err != ErrNotFound {
 		t.Fatal("'foo' should have expired")
 	}
-
 }
