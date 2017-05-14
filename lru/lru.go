@@ -166,6 +166,17 @@ func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 	}
 }
 
+// Touch updates the item's eviction status (LRU and TTL if supplied) and CAS
+// ID without requiring the value. If the item doesn't already exist, it
+// returns an ErrNotFound.
+func (c *Cache) Touch(key string, ttl time.Duration) error {
+	if ele, ok := c.cache[key]; ok {
+		c.Set(key, ele.Value.(*entry).value, ttl)
+		return nil
+	}
+	return ErrNotFound
+}
+
 // Add sets the item only if it doesn't already exist.
 func (c *Cache) Add(key string, value []byte, ttl time.Duration) error {
 	if _, ok := c.cache[key]; !ok {
@@ -187,7 +198,10 @@ func (c *Cache) Replace(key string, value []byte, ttl time.Duration) error {
 // Cas is a "compare and swap" or "check and set" operation. It attempts to set
 // the key/value pair if a) the item already exists in the cache and
 // b) the item's current cas value matches the supplied argument. If the item doesn't exist,
-// it returns NotFound, and if the item exists but has a different cas value, it returns Exists.
+// it returns ErrNotFound, and if the item exists but has a different cas
+// value, it returns ErrExists. CAS is useful when multiple clients may be
+// operating on the same cached items and updates should only be applied by one
+// if a change hasn't occurred in the meantime by another.
 func (c *Cache) Cas(key string, value []byte, ttl time.Duration, cas uint64) error {
 	if ele, ok := c.cache[key]; ok {
 		if ele.Value.(*entry).cas == cas {

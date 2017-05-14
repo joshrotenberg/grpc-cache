@@ -121,6 +121,28 @@ func TestCAS(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// gets the value again
+	v, n, err = c.Gets("castest")
+	if err != nil {
+		t.Fatal("error getting castest")
+	}
+	if n != 3 || bytes.Compare(v, []byte("yup")) != 0 {
+		t.Fatalf("stored value doesn't look right: %d %s", n, v)
+	}
+
+	err = c.Touch("castest", 0)
+	if err != nil {
+		t.Logf("touch of 'castest' failed: %s", err)
+	}
+
+	_, n, err = c.Gets("castest")
+	if err != nil {
+		t.Fatal("error getting castest")
+	}
+	if n != 4 {
+		t.Fatalf("cas wasn't updated by touch: %d", n)
+	}
+
 }
 
 func TestPrependAppend(t *testing.T) {
