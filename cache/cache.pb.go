@@ -9,16 +9,17 @@ It is generated from these files:
 	cache.proto
 
 It has these top-level messages:
-	AddRequest
-	AddReply
+	CacheItem
+	SetRequest
+	SetReply
 	GetRequest
 	GetReply
-	RemoveRequest
-	RemoveReply
-	LenRequest
-	LenReply
-	ClearRequest
-	ClearReply
+	AddRequest
+	AddReply
+	ReplaceRequest
+	ReplaceReply
+	TouchRequest
+	TouchReply
 */
 package cache
 
@@ -42,177 +43,221 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-type AddRequest struct {
+// CacheItem encapsulates any in/out cache values into a single message
+// structure. Some values may not be pertinent in some situations (i.e. you
+// can't set the cas).
+type CacheItem struct {
 	Key   string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
 	Value []byte `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Ttl   int64  `protobuf:"varint,3,opt,name=ttl" json:"ttl,omitempty"`
+	Cas   int64  `protobuf:"varint,4,opt,name=cas" json:"cas,omitempty"`
 }
 
-func (m *AddRequest) Reset()                    { *m = AddRequest{} }
-func (m *AddRequest) String() string            { return proto.CompactTextString(m) }
-func (*AddRequest) ProtoMessage()               {}
-func (*AddRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *CacheItem) Reset()                    { *m = CacheItem{} }
+func (m *CacheItem) String() string            { return proto.CompactTextString(m) }
+func (*CacheItem) ProtoMessage()               {}
+func (*CacheItem) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *AddRequest) GetKey() string {
+func (m *CacheItem) GetKey() string {
 	if m != nil {
 		return m.Key
 	}
 	return ""
 }
 
-func (m *AddRequest) GetValue() []byte {
+func (m *CacheItem) GetValue() []byte {
 	if m != nil {
 		return m.Value
 	}
 	return nil
 }
 
-type AddReply struct {
-	Key string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+func (m *CacheItem) GetTtl() int64 {
+	if m != nil {
+		return m.Ttl
+	}
+	return 0
 }
 
-func (m *AddReply) Reset()                    { *m = AddReply{} }
-func (m *AddReply) String() string            { return proto.CompactTextString(m) }
-func (*AddReply) ProtoMessage()               {}
-func (*AddReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *AddReply) GetKey() string {
+func (m *CacheItem) GetCas() int64 {
 	if m != nil {
-		return m.Key
+		return m.Cas
 	}
-	return ""
+	return 0
+}
+
+type SetRequest struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
+}
+
+func (m *SetRequest) Reset()                    { *m = SetRequest{} }
+func (m *SetRequest) String() string            { return proto.CompactTextString(m) }
+func (*SetRequest) ProtoMessage()               {}
+func (*SetRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *SetRequest) GetItem() *CacheItem {
+	if m != nil {
+		return m.Item
+	}
+	return nil
+}
+
+type SetReply struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
+}
+
+func (m *SetReply) Reset()                    { *m = SetReply{} }
+func (m *SetReply) String() string            { return proto.CompactTextString(m) }
+func (*SetReply) ProtoMessage()               {}
+func (*SetReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *SetReply) GetItem() *CacheItem {
+	if m != nil {
+		return m.Item
+	}
+	return nil
 }
 
 type GetRequest struct {
-	Key string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
 }
 
 func (m *GetRequest) Reset()                    { *m = GetRequest{} }
 func (m *GetRequest) String() string            { return proto.CompactTextString(m) }
 func (*GetRequest) ProtoMessage()               {}
-func (*GetRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+func (*GetRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
 
-func (m *GetRequest) GetKey() string {
+func (m *GetRequest) GetItem() *CacheItem {
 	if m != nil {
-		return m.Key
+		return m.Item
 	}
-	return ""
+	return nil
 }
 
 type GetReply struct {
-	Key   string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
-	Value []byte `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	Ok    bool   `protobuf:"varint,3,opt,name=ok" json:"ok,omitempty"`
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
 }
 
 func (m *GetReply) Reset()                    { *m = GetReply{} }
 func (m *GetReply) String() string            { return proto.CompactTextString(m) }
 func (*GetReply) ProtoMessage()               {}
-func (*GetReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+func (*GetReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
 
-func (m *GetReply) GetKey() string {
+func (m *GetReply) GetItem() *CacheItem {
 	if m != nil {
-		return m.Key
-	}
-	return ""
-}
-
-func (m *GetReply) GetValue() []byte {
-	if m != nil {
-		return m.Value
+		return m.Item
 	}
 	return nil
 }
 
-func (m *GetReply) GetOk() bool {
+type AddRequest struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
+}
+
+func (m *AddRequest) Reset()                    { *m = AddRequest{} }
+func (m *AddRequest) String() string            { return proto.CompactTextString(m) }
+func (*AddRequest) ProtoMessage()               {}
+func (*AddRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+
+func (m *AddRequest) GetItem() *CacheItem {
 	if m != nil {
-		return m.Ok
+		return m.Item
 	}
-	return false
+	return nil
 }
 
-type RemoveRequest struct {
-	Key string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+type AddReply struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
 }
 
-func (m *RemoveRequest) Reset()                    { *m = RemoveRequest{} }
-func (m *RemoveRequest) String() string            { return proto.CompactTextString(m) }
-func (*RemoveRequest) ProtoMessage()               {}
-func (*RemoveRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
+func (m *AddReply) Reset()                    { *m = AddReply{} }
+func (m *AddReply) String() string            { return proto.CompactTextString(m) }
+func (*AddReply) ProtoMessage()               {}
+func (*AddReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
 
-func (m *RemoveRequest) GetKey() string {
+func (m *AddReply) GetItem() *CacheItem {
 	if m != nil {
-		return m.Key
+		return m.Item
 	}
-	return ""
+	return nil
 }
 
-type RemoveReply struct {
-	Key string `protobuf:"bytes,1,opt,name=key" json:"key,omitempty"`
+type ReplaceRequest struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
 }
 
-func (m *RemoveReply) Reset()                    { *m = RemoveReply{} }
-func (m *RemoveReply) String() string            { return proto.CompactTextString(m) }
-func (*RemoveReply) ProtoMessage()               {}
-func (*RemoveReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
+func (m *ReplaceRequest) Reset()                    { *m = ReplaceRequest{} }
+func (m *ReplaceRequest) String() string            { return proto.CompactTextString(m) }
+func (*ReplaceRequest) ProtoMessage()               {}
+func (*ReplaceRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
 
-func (m *RemoveReply) GetKey() string {
+func (m *ReplaceRequest) GetItem() *CacheItem {
 	if m != nil {
-		return m.Key
+		return m.Item
 	}
-	return ""
+	return nil
 }
 
-type LenRequest struct {
+type ReplaceReply struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
 }
 
-func (m *LenRequest) Reset()                    { *m = LenRequest{} }
-func (m *LenRequest) String() string            { return proto.CompactTextString(m) }
-func (*LenRequest) ProtoMessage()               {}
-func (*LenRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (m *ReplaceReply) Reset()                    { *m = ReplaceReply{} }
+func (m *ReplaceReply) String() string            { return proto.CompactTextString(m) }
+func (*ReplaceReply) ProtoMessage()               {}
+func (*ReplaceReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
 
-type LenReply struct {
-	Len int32 `protobuf:"varint,1,opt,name=len" json:"len,omitempty"`
-}
-
-func (m *LenReply) Reset()                    { *m = LenReply{} }
-func (m *LenReply) String() string            { return proto.CompactTextString(m) }
-func (*LenReply) ProtoMessage()               {}
-func (*LenReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
-
-func (m *LenReply) GetLen() int32 {
+func (m *ReplaceReply) GetItem() *CacheItem {
 	if m != nil {
-		return m.Len
+		return m.Item
 	}
-	return 0
+	return nil
 }
 
-type ClearRequest struct {
+type TouchRequest struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
 }
 
-func (m *ClearRequest) Reset()                    { *m = ClearRequest{} }
-func (m *ClearRequest) String() string            { return proto.CompactTextString(m) }
-func (*ClearRequest) ProtoMessage()               {}
-func (*ClearRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
+func (m *TouchRequest) Reset()                    { *m = TouchRequest{} }
+func (m *TouchRequest) String() string            { return proto.CompactTextString(m) }
+func (*TouchRequest) ProtoMessage()               {}
+func (*TouchRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
 
-type ClearReply struct {
+func (m *TouchRequest) GetItem() *CacheItem {
+	if m != nil {
+		return m.Item
+	}
+	return nil
 }
 
-func (m *ClearReply) Reset()                    { *m = ClearReply{} }
-func (m *ClearReply) String() string            { return proto.CompactTextString(m) }
-func (*ClearReply) ProtoMessage()               {}
-func (*ClearReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
+type TouchReply struct {
+	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
+}
+
+func (m *TouchReply) Reset()                    { *m = TouchReply{} }
+func (m *TouchReply) String() string            { return proto.CompactTextString(m) }
+func (*TouchReply) ProtoMessage()               {}
+func (*TouchReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
+
+func (m *TouchReply) GetItem() *CacheItem {
+	if m != nil {
+		return m.Item
+	}
+	return nil
+}
 
 func init() {
-	proto.RegisterType((*AddRequest)(nil), "cache.AddRequest")
-	proto.RegisterType((*AddReply)(nil), "cache.AddReply")
+	proto.RegisterType((*CacheItem)(nil), "cache.CacheItem")
+	proto.RegisterType((*SetRequest)(nil), "cache.SetRequest")
+	proto.RegisterType((*SetReply)(nil), "cache.SetReply")
 	proto.RegisterType((*GetRequest)(nil), "cache.GetRequest")
 	proto.RegisterType((*GetReply)(nil), "cache.GetReply")
-	proto.RegisterType((*RemoveRequest)(nil), "cache.RemoveRequest")
-	proto.RegisterType((*RemoveReply)(nil), "cache.RemoveReply")
-	proto.RegisterType((*LenRequest)(nil), "cache.LenRequest")
-	proto.RegisterType((*LenReply)(nil), "cache.LenReply")
-	proto.RegisterType((*ClearRequest)(nil), "cache.ClearRequest")
-	proto.RegisterType((*ClearReply)(nil), "cache.ClearReply")
+	proto.RegisterType((*AddRequest)(nil), "cache.AddRequest")
+	proto.RegisterType((*AddReply)(nil), "cache.AddReply")
+	proto.RegisterType((*ReplaceRequest)(nil), "cache.ReplaceRequest")
+	proto.RegisterType((*ReplaceReply)(nil), "cache.ReplaceReply")
+	proto.RegisterType((*TouchRequest)(nil), "cache.TouchRequest")
+	proto.RegisterType((*TouchReply)(nil), "cache.TouchReply")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -226,11 +271,11 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Cache service
 
 type CacheClient interface {
-	Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error)
+	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error)
 	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetReply, error)
-	Remove(ctx context.Context, in *RemoveRequest, opts ...grpc.CallOption) (*RemoveReply, error)
-	Len(ctx context.Context, in *LenRequest, opts ...grpc.CallOption) (*LenReply, error)
-	Clear(ctx context.Context, in *ClearRequest, opts ...grpc.CallOption) (*ClearReply, error)
+	Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error)
+	Replace(ctx context.Context, in *ReplaceRequest, opts ...grpc.CallOption) (*ReplaceReply, error)
+	Touch(ctx context.Context, in *TouchRequest, opts ...grpc.CallOption) (*TouchReply, error)
 }
 
 type cacheClient struct {
@@ -241,9 +286,9 @@ func NewCacheClient(cc *grpc.ClientConn) CacheClient {
 	return &cacheClient{cc}
 }
 
-func (c *cacheClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error) {
-	out := new(AddReply)
-	err := grpc.Invoke(ctx, "/cache.Cache/Add", in, out, c.cc, opts...)
+func (c *cacheClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error) {
+	out := new(SetReply)
+	err := grpc.Invoke(ctx, "/cache.Cache/Set", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -259,27 +304,27 @@ func (c *cacheClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *cacheClient) Remove(ctx context.Context, in *RemoveRequest, opts ...grpc.CallOption) (*RemoveReply, error) {
-	out := new(RemoveReply)
-	err := grpc.Invoke(ctx, "/cache.Cache/Remove", in, out, c.cc, opts...)
+func (c *cacheClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error) {
+	out := new(AddReply)
+	err := grpc.Invoke(ctx, "/cache.Cache/Add", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *cacheClient) Len(ctx context.Context, in *LenRequest, opts ...grpc.CallOption) (*LenReply, error) {
-	out := new(LenReply)
-	err := grpc.Invoke(ctx, "/cache.Cache/Len", in, out, c.cc, opts...)
+func (c *cacheClient) Replace(ctx context.Context, in *ReplaceRequest, opts ...grpc.CallOption) (*ReplaceReply, error) {
+	out := new(ReplaceReply)
+	err := grpc.Invoke(ctx, "/cache.Cache/Replace", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *cacheClient) Clear(ctx context.Context, in *ClearRequest, opts ...grpc.CallOption) (*ClearReply, error) {
-	out := new(ClearReply)
-	err := grpc.Invoke(ctx, "/cache.Cache/Clear", in, out, c.cc, opts...)
+func (c *cacheClient) Touch(ctx context.Context, in *TouchRequest, opts ...grpc.CallOption) (*TouchReply, error) {
+	out := new(TouchReply)
+	err := grpc.Invoke(ctx, "/cache.Cache/Touch", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -289,31 +334,31 @@ func (c *cacheClient) Clear(ctx context.Context, in *ClearRequest, opts ...grpc.
 // Server API for Cache service
 
 type CacheServer interface {
-	Add(context.Context, *AddRequest) (*AddReply, error)
+	Set(context.Context, *SetRequest) (*SetReply, error)
 	Get(context.Context, *GetRequest) (*GetReply, error)
-	Remove(context.Context, *RemoveRequest) (*RemoveReply, error)
-	Len(context.Context, *LenRequest) (*LenReply, error)
-	Clear(context.Context, *ClearRequest) (*ClearReply, error)
+	Add(context.Context, *AddRequest) (*AddReply, error)
+	Replace(context.Context, *ReplaceRequest) (*ReplaceReply, error)
+	Touch(context.Context, *TouchRequest) (*TouchReply, error)
 }
 
 func RegisterCacheServer(s *grpc.Server, srv CacheServer) {
 	s.RegisterService(&_Cache_serviceDesc, srv)
 }
 
-func _Cache_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddRequest)
+func _Cache_Set_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CacheServer).Add(ctx, in)
+		return srv.(CacheServer).Set(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cache.Cache/Add",
+		FullMethod: "/cache.Cache/Set",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Add(ctx, req.(*AddRequest))
+		return srv.(CacheServer).Set(ctx, req.(*SetRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -336,56 +381,56 @@ func _Cache_Get_Handler(srv interface{}, ctx context.Context, dec func(interface
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Cache_Remove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(RemoveRequest)
+func _Cache_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CacheServer).Remove(ctx, in)
+		return srv.(CacheServer).Add(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cache.Cache/Remove",
+		FullMethod: "/cache.Cache/Add",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Remove(ctx, req.(*RemoveRequest))
+		return srv.(CacheServer).Add(ctx, req.(*AddRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Cache_Len_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LenRequest)
+func _Cache_Replace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReplaceRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CacheServer).Len(ctx, in)
+		return srv.(CacheServer).Replace(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cache.Cache/Len",
+		FullMethod: "/cache.Cache/Replace",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Len(ctx, req.(*LenRequest))
+		return srv.(CacheServer).Replace(ctx, req.(*ReplaceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Cache_Clear_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ClearRequest)
+func _Cache_Touch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TouchRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(CacheServer).Clear(ctx, in)
+		return srv.(CacheServer).Touch(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/cache.Cache/Clear",
+		FullMethod: "/cache.Cache/Touch",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Clear(ctx, req.(*ClearRequest))
+		return srv.(CacheServer).Touch(ctx, req.(*TouchRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -395,24 +440,24 @@ var _Cache_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*CacheServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Add",
-			Handler:    _Cache_Add_Handler,
+			MethodName: "Set",
+			Handler:    _Cache_Set_Handler,
 		},
 		{
 			MethodName: "Get",
 			Handler:    _Cache_Get_Handler,
 		},
 		{
-			MethodName: "Remove",
-			Handler:    _Cache_Remove_Handler,
+			MethodName: "Add",
+			Handler:    _Cache_Add_Handler,
 		},
 		{
-			MethodName: "Len",
-			Handler:    _Cache_Len_Handler,
+			MethodName: "Replace",
+			Handler:    _Cache_Replace_Handler,
 		},
 		{
-			MethodName: "Clear",
-			Handler:    _Cache_Clear_Handler,
+			MethodName: "Touch",
+			Handler:    _Cache_Touch_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -422,24 +467,24 @@ var _Cache_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("cache.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 289 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x74, 0x52, 0xcd, 0x4e, 0xb3, 0x50,
-	0x14, 0x2c, 0x10, 0x1a, 0xbe, 0x29, 0x5f, 0xb5, 0xc7, 0x2e, 0x08, 0x31, 0x8a, 0x77, 0x45, 0x62,
-	0xd2, 0x44, 0xed, 0x0b, 0xd4, 0x2e, 0xba, 0xe9, 0xea, 0xbe, 0x01, 0x96, 0x93, 0x98, 0x70, 0x05,
-	0xac, 0xb4, 0x09, 0x4f, 0xee, 0xd6, 0x70, 0xf9, 0x6b, 0x95, 0xee, 0xee, 0x9c, 0x33, 0x73, 0x86,
-	0x99, 0x80, 0xc9, 0x2e, 0xda, 0xbd, 0xf3, 0x22, 0xdf, 0x67, 0x45, 0x46, 0xb6, 0x06, 0x62, 0x09,
-	0xac, 0xe2, 0x58, 0xf2, 0xe7, 0x81, 0xbf, 0x0a, 0xba, 0x86, 0x95, 0x70, 0xe9, 0x19, 0x81, 0x11,
-	0xfe, 0x93, 0xd5, 0x93, 0xe6, 0xb0, 0x8f, 0x91, 0x3a, 0xb0, 0x67, 0x06, 0x46, 0xe8, 0xca, 0x1a,
-	0x88, 0x5b, 0x38, 0x5a, 0x95, 0xab, 0xf2, 0xaf, 0x46, 0xdc, 0x01, 0x1b, 0x2e, 0x2e, 0xde, 0x14,
-	0xaf, 0x70, 0xf4, 0x7e, 0x50, 0x3d, 0xec, 0x48, 0x53, 0x98, 0x59, 0xe2, 0x59, 0x81, 0x11, 0x3a,
-	0xd2, 0xcc, 0x12, 0xf1, 0x80, 0xff, 0x92, 0x3f, 0xb2, 0x23, 0x5f, 0xb6, 0xb9, 0xc7, 0xa4, 0xa5,
-	0x0c, 0x7f, 0xa7, 0x0b, 0x6c, 0x39, 0x6d, 0x0e, 0x54, 0x99, 0x34, 0x6a, 0xb8, 0x8a, 0x53, 0xcd,
-	0xb5, 0x65, 0xf5, 0x14, 0x53, 0xb8, 0x6b, 0xc5, 0xd1, 0xbe, 0x65, 0xbb, 0x40, 0x83, 0x73, 0x55,
-	0x3e, 0x7f, 0x1b, 0xb0, 0xd7, 0x55, 0x9f, 0xf4, 0x08, 0x6b, 0x15, 0xc7, 0x34, 0x5b, 0xd4, 0x5d,
-	0xf7, 0xdd, 0xfa, 0x57, 0xa7, 0xa3, 0x5c, 0x95, 0x62, 0x54, 0x91, 0x37, 0x5c, 0x74, 0xe4, 0xbe,
-	0xb4, 0x8e, 0xdc, 0xf6, 0x24, 0x46, 0xb4, 0xc4, 0xb8, 0x8e, 0x43, 0xf3, 0x66, 0x79, 0x56, 0x80,
-	0x4f, 0xbf, 0xa6, 0x9d, 0xc5, 0x96, 0xd3, 0xce, 0xa2, 0xcf, 0xdb, 0x59, 0xb4, 0xa1, 0xc5, 0x88,
-	0x9e, 0x60, 0xeb, 0x50, 0x74, 0xd3, 0xec, 0x4e, 0x23, 0xfb, 0xb3, 0xf3, 0xa1, 0x96, 0xbc, 0x8d,
-	0xf5, 0xdf, 0xf4, 0xf2, 0x13, 0x00, 0x00, 0xff, 0xff, 0x15, 0x2b, 0x61, 0x0b, 0x5c, 0x02, 0x00,
-	0x00,
+	// 301 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x93, 0xc1, 0x4f, 0x83, 0x30,
+	0x14, 0xc6, 0x87, 0x0c, 0x75, 0x6f, 0x44, 0xb7, 0xaa, 0x09, 0xe1, 0x44, 0x88, 0x07, 0x12, 0x93,
+	0x45, 0xeb, 0xa2, 0xe7, 0xc5, 0x43, 0xe3, 0xb5, 0x33, 0xf1, 0x5c, 0xcb, 0x4b, 0x66, 0x64, 0x01,
+	0xa5, 0x98, 0xf0, 0xaf, 0x7b, 0x32, 0x2d, 0x8c, 0x81, 0x5e, 0x60, 0xb7, 0xd7, 0xef, 0x7d, 0x1f,
+	0x3f, 0x78, 0x8f, 0xc2, 0x54, 0x0a, 0xb9, 0xc1, 0x45, 0xf6, 0x95, 0xaa, 0x94, 0x38, 0xe6, 0x10,
+	0xbe, 0xc2, 0xe4, 0x49, 0x17, 0xcf, 0x0a, 0xb7, 0x64, 0x06, 0xf6, 0x07, 0x96, 0x9e, 0x15, 0x58,
+	0xd1, 0x84, 0xeb, 0x92, 0x5c, 0x82, 0xf3, 0x2d, 0x92, 0x02, 0xbd, 0xa3, 0xc0, 0x8a, 0x5c, 0x5e,
+	0x1d, 0xb4, 0x4f, 0xa9, 0xc4, 0xb3, 0x03, 0x2b, 0xb2, 0xb9, 0x2e, 0xb5, 0x22, 0x45, 0xee, 0x8d,
+	0x2b, 0x45, 0x8a, 0x3c, 0xa4, 0x00, 0x6b, 0x54, 0x1c, 0x3f, 0x0b, 0xcc, 0x15, 0xb9, 0x86, 0xf1,
+	0xbb, 0xc2, 0xad, 0x79, 0xf4, 0x94, 0xce, 0x16, 0xd5, 0x9b, 0x34, 0x64, 0x6e, 0xba, 0xe1, 0x2d,
+	0x9c, 0x9a, 0x4c, 0x96, 0x94, 0x3d, 0x13, 0x14, 0x80, 0x1d, 0x40, 0x61, 0x83, 0x29, 0xab, 0x38,
+	0x1e, 0x4c, 0x31, 0x99, 0xfe, 0x94, 0x07, 0x38, 0xd3, 0x76, 0x21, 0x71, 0x18, 0x69, 0x09, 0x6e,
+	0x93, 0xeb, 0x4f, 0x5b, 0x82, 0xfb, 0x92, 0x16, 0x72, 0x33, 0x8c, 0x45, 0x01, 0xea, 0x54, 0x6f,
+	0x12, 0xfd, 0xb1, 0xc0, 0x31, 0x1a, 0xb9, 0x01, 0x7b, 0x8d, 0x8a, 0xcc, 0x6b, 0xe3, 0xfe, 0xff,
+	0xf0, 0xcf, 0xdb, 0x52, 0x96, 0x94, 0xe1, 0x48, 0x9b, 0x59, 0xcb, 0xcc, 0xfe, 0x9b, 0x59, 0xc7,
+	0xbc, 0x8a, 0xe3, 0xc6, 0xbc, 0xdf, 0x56, 0x63, 0xde, 0x2d, 0x23, 0x1c, 0x91, 0x47, 0x38, 0xa9,
+	0x07, 0x46, 0xae, 0xea, 0x6e, 0x77, 0xf0, 0xfe, 0xc5, 0x5f, 0xb9, 0x0a, 0xde, 0x81, 0x63, 0xbe,
+	0x9e, 0xec, 0xfa, 0xed, 0x09, 0xfa, 0xf3, 0xae, 0x68, 0x22, 0x6f, 0xc7, 0xe6, 0xb6, 0xdd, 0xff,
+	0x06, 0x00, 0x00, 0xff, 0xff, 0xf7, 0x35, 0x4f, 0x79, 0x7c, 0x03, 0x00, 0x00,
 }

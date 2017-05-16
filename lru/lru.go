@@ -288,10 +288,10 @@ func Uint64ToBytes(n uint64) []byte {
 	return buf
 }
 
-// Increment increments the value of key by incrBy. The value should be stored
+// Increment increments the value of key by incrementBy. The value should be stored
 // as a uint64 converted to a []byte with Uint64ToBytes (or something
 // equivalent) or the behavior is undefined.
-func (c *Cache) Increment(key string, incrBy uint64) error {
+func (c *Cache) Increment(key string, incrementBy uint64) error {
 	ele := c.getElement(key)
 	if ele != nil {
 		n, err := BytesToUint64(ele.Value.(*entry).value)
@@ -299,7 +299,7 @@ func (c *Cache) Increment(key string, incrBy uint64) error {
 			return err
 		}
 
-		n += incrBy
+		n += incrementBy
 
 		b := Uint64ToBytes(n)
 		ele.Value.(*entry).value = b
@@ -310,10 +310,10 @@ func (c *Cache) Increment(key string, incrBy uint64) error {
 	return ErrNotFound
 }
 
-// Decrement decrements the value of key by incrBy. The value should be stored
+// Decrement decrements the value of key by decrBy. The value should be stored
 // as a uint64 converted to a []byte with Uint64ToBytes (or something
 // equivalent) or the behavior is undefined.
-func (c *Cache) Decrement(key string, incrBy uint64) error {
+func (c *Cache) Decrement(key string, decrementBy uint64) error {
 	ele := c.getElement(key)
 	if ele != nil {
 		n, err := BytesToUint64(ele.Value.(*entry).value)
@@ -321,7 +321,7 @@ func (c *Cache) Decrement(key string, incrBy uint64) error {
 			return err
 		}
 
-		n -= incrBy
+		n -= decrementBy
 
 		b := Uint64ToBytes(n)
 		ele.Value.(*entry).value = b

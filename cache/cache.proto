@@ -1,52 +1,63 @@
 syntax = "proto3";
-
+	
 package cache;
 
 service Cache {
-  rpc Add(AddRequest) returns (AddReply) {}
+  rpc Set(SetRequest) returns (SetReply) {}
   rpc Get(GetRequest) returns (GetReply) {}
-  rpc Remove(RemoveRequest) returns (RemoveReply) {}
-  rpc Len(LenRequest) returns (LenReply) {}
-  rpc Clear(ClearRequest) returns (ClearReply) {}
+  rpc Add(AddRequest) returns (AddReply) {}
+  rpc Replace(ReplaceRequest) returns (ReplaceReply) {}
+  rpc Touch(TouchRequest) returns (TouchReply) {}
 }
 
-message AddRequest {
+// CacheItem encapsulates any in/out cache values into a single message
+// structure. Some values may not be pertinent in some situations (i.e. you
+// can't set the cas).
+message CacheItem {
   string key = 1;
   bytes value = 2;
+  int64 ttl = 3;
+  int64 cas = 4;
 }
 
-message AddReply {
-  string key = 1;
+message SetRequest {
+  CacheItem item = 1;
+}
+
+message SetReply {
+  CacheItem item = 1;
 }
 
 message GetRequest {
-  string key = 1;
+  CacheItem item = 1;
 }
 
 message GetReply {
-  string key = 1;
-  bytes value = 2;
-  bool ok = 3;
+  CacheItem item = 1;
 }
 
-message RemoveRequest {
-  string key = 1;
+message AddRequest {
+  CacheItem item = 1;
 }
 
-message RemoveReply {
-  string key = 1;
+message AddReply {
+  CacheItem item = 1;
 }
 
-message LenRequest {
+message ReplaceRequest {
+  CacheItem item = 1;
 }
 
-message LenReply {
-  int32 len = 1;
+message ReplaceReply {
+  CacheItem item = 1;
 }
 
-message ClearRequest {
+message TouchRequest { 
+  CacheItem item = 1;
 }
 
-message ClearReply {
+message TouchReply {
+  CacheItem item = 1;
 }
+
 

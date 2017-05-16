@@ -22,7 +22,7 @@ func TestBasic(t *testing.T) {
 	// add the same key, it shouldn't replace the old value since it already exists
 	err := c.Add("foo", []byte("notbar"), 0)
 	if err != ErrExists {
-		t.Fatal("expected an Exists error")
+		t.Fatal("expected ErrExists")
 	}
 	if v, err := c.Get("foo"); err == nil {
 		if bytes.Compare(v, []byte("bar")) != 0 {
