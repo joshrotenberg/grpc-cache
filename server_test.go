@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+const defaultHost = "localhost:5051"
+
 func createCacheItem(key string, value string, ttl int64) *pb.CacheItem {
 
 	item := &pb.CacheItem{
@@ -19,6 +21,53 @@ func createCacheItem(key string, value string, ttl int64) *pb.CacheItem {
 	return item
 }
 
+func createCacheRequest(operation pb.CacheRequest_Operation, item *pb.CacheItem) *pb.CacheRequest {
+
+	return &pb.CacheRequest{Operation: operation, Item: item}
+}
+
+// inits, starts and returns a cache server and a connected client
+func cacheServer(t *testing.T, host string, maxEntries int, done chan bool) (*CacheServer, pb.CacheClient) {
+	cs := NewCacheServer(maxEntries)
+	conn, err := grpc.Dial(host, grpc.WithInsecure())
+	if err != nil {
+		t.Fatalf("error connecting to server: %s", err)
+	}
+
+	cc := pb.NewCacheClient(conn)
+	go func() {
+		cs.Start(host)
+		<-done
+		conn.Close()
+		cs.Stop()
+	}()
+	return cs, cc
+}
+
+func TestSet(t *testing.T) {
+	done := make(chan bool)
+	_, cc := cacheServer(t, defaultHost, 20, done)
+
+	setItem := createCacheItem("foo", "bar", 1)
+	setRequest := createCacheRequest(pb.CacheRequest_SET, setItem)
+	_, err := cc.Set(context.Background(), setRequest)
+	if err != nil {
+		t.Fatalf("error setting item: %s", err)
+	}
+
+	getItem := createCacheItem("foo", "", 0)
+	getRequest := createCacheRequest(pb.CacheRequest_GET, getItem)
+	get, err := cc.Get(context.Background(), getRequest)
+	if err != nil {
+		t.Fatalf("error getting item: %s", err)
+	}
+	if bytes.Compare(get.Item.Value, []byte("bar")) != 0 {
+		t.Fatalf("cache item value wasn't as expected; got %s, expected %s", get.Item.Value, []byte("bar"))
+	}
+	done <- true
+}
+
+/*
 func TestCacheServer(t *testing.T) {
 
 	done := make(chan bool)
@@ -39,6 +88,7 @@ func TestCacheServer(t *testing.T) {
 		}
 	}()
 	c := pb.NewCacheClient(conn)
+	t.Logf("%#v", c)
 
 	setItem := createCacheItem("foo", "bar", 0)
 	set, err := c.Set(context.Background(), &pb.SetRequest{Item: setItem})
@@ -64,7 +114,13 @@ func TestCacheServer(t *testing.T) {
 	}
 	t.Logf("Add: %s %#v", add, err)
 
-	/*
+	replaceItem := createCacheItem("foo", "newbar", 0)
+	replace, err := c.Replace(context.Background(), &pb.ReplaceRequest{Item: replaceItem})
+	if err != nil {
+		t.Fatal("Got an error replacing 'foo': %s", err)
+	}
+	t.Logf("Replace: %s", replace)
+
 		// test Get
 		get, err := c.Get(context.Background(), &pb.GetRequest{Key: "foo"})
 		if err != nil {
@@ -132,6 +188,6 @@ func TestCacheServer(t *testing.T) {
 			t.Fatal("Expected an empty cache")
 		}
 		t.Logf("Cache length: %d", len.Len)
-	*/
 	done <- true
 }
+*/

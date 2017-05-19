@@ -10,16 +10,8 @@ It is generated from these files:
 
 It has these top-level messages:
 	CacheItem
-	SetRequest
-	SetReply
-	GetRequest
-	GetReply
-	AddRequest
-	AddReply
-	ReplaceRequest
-	ReplaceReply
-	TouchRequest
-	TouchReply
+	CacheRequest
+	CacheResponse
 */
 package cache
 
@@ -42,6 +34,57 @@ var _ = math.Inf
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
+
+type CacheRequest_Operation int32
+
+const (
+	CacheRequest_SET       CacheRequest_Operation = 0
+	CacheRequest_CAS       CacheRequest_Operation = 1
+	CacheRequest_GET       CacheRequest_Operation = 2
+	CacheRequest_ADD       CacheRequest_Operation = 3
+	CacheRequest_REPLACE   CacheRequest_Operation = 4
+	CacheRequest_DELETE    CacheRequest_Operation = 5
+	CacheRequest_TOUCH     CacheRequest_Operation = 6
+	CacheRequest_APPEND    CacheRequest_Operation = 7
+	CacheRequest_PREPEND   CacheRequest_Operation = 8
+	CacheRequest_INCREMENT CacheRequest_Operation = 9
+	CacheRequest_DECREMENT CacheRequest_Operation = 10
+	CacheRequest_FLUSHALL  CacheRequest_Operation = 11
+)
+
+var CacheRequest_Operation_name = map[int32]string{
+	0:  "SET",
+	1:  "CAS",
+	2:  "GET",
+	3:  "ADD",
+	4:  "REPLACE",
+	5:  "DELETE",
+	6:  "TOUCH",
+	7:  "APPEND",
+	8:  "PREPEND",
+	9:  "INCREMENT",
+	10: "DECREMENT",
+	11: "FLUSHALL",
+}
+var CacheRequest_Operation_value = map[string]int32{
+	"SET":       0,
+	"CAS":       1,
+	"GET":       2,
+	"ADD":       3,
+	"REPLACE":   4,
+	"DELETE":    5,
+	"TOUCH":     6,
+	"APPEND":    7,
+	"PREPEND":   8,
+	"INCREMENT": 9,
+	"DECREMENT": 10,
+	"FLUSHALL":  11,
+}
+
+func (x CacheRequest_Operation) String() string {
+	return proto.EnumName(CacheRequest_Operation_name, int32(x))
+}
+func (CacheRequest_Operation) EnumDescriptor() ([]byte, []int) { return fileDescriptor0, []int{1, 0} }
 
 // CacheItem encapsulates any in/out cache values into a single message
 // structure. Some values may not be pertinent in some situations (i.e. you
@@ -86,160 +129,72 @@ func (m *CacheItem) GetCas() int64 {
 	return 0
 }
 
-type SetRequest struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
+type CacheRequest struct {
+	Operation CacheRequest_Operation `protobuf:"varint,1,opt,name=operation,enum=cache.CacheRequest_Operation" json:"operation,omitempty"`
+	Item      *CacheItem             `protobuf:"bytes,2,opt,name=item" json:"item,omitempty"`
+	Append    []byte                 `protobuf:"bytes,3,opt,name=append,proto3" json:"append,omitempty"`
+	Prepend   []byte                 `protobuf:"bytes,4,opt,name=prepend,proto3" json:"prepend,omitempty"`
+	Increment uint64                 `protobuf:"varint,5,opt,name=increment" json:"increment,omitempty"`
+	Decrement uint64                 `protobuf:"varint,6,opt,name=decrement" json:"decrement,omitempty"`
 }
 
-func (m *SetRequest) Reset()                    { *m = SetRequest{} }
-func (m *SetRequest) String() string            { return proto.CompactTextString(m) }
-func (*SetRequest) ProtoMessage()               {}
-func (*SetRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+func (m *CacheRequest) Reset()                    { *m = CacheRequest{} }
+func (m *CacheRequest) String() string            { return proto.CompactTextString(m) }
+func (*CacheRequest) ProtoMessage()               {}
+func (*CacheRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
 
-func (m *SetRequest) GetItem() *CacheItem {
+func (m *CacheRequest) GetOperation() CacheRequest_Operation {
+	if m != nil {
+		return m.Operation
+	}
+	return CacheRequest_SET
+}
+
+func (m *CacheRequest) GetItem() *CacheItem {
 	if m != nil {
 		return m.Item
 	}
 	return nil
 }
 
-type SetReply struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *SetReply) Reset()                    { *m = SetReply{} }
-func (m *SetReply) String() string            { return proto.CompactTextString(m) }
-func (*SetReply) ProtoMessage()               {}
-func (*SetReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
-
-func (m *SetReply) GetItem() *CacheItem {
+func (m *CacheRequest) GetAppend() []byte {
 	if m != nil {
-		return m.Item
+		return m.Append
 	}
 	return nil
 }
 
-type GetRequest struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *GetRequest) Reset()                    { *m = GetRequest{} }
-func (m *GetRequest) String() string            { return proto.CompactTextString(m) }
-func (*GetRequest) ProtoMessage()               {}
-func (*GetRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
-
-func (m *GetRequest) GetItem() *CacheItem {
+func (m *CacheRequest) GetPrepend() []byte {
 	if m != nil {
-		return m.Item
+		return m.Prepend
 	}
 	return nil
 }
 
-type GetReply struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *GetReply) Reset()                    { *m = GetReply{} }
-func (m *GetReply) String() string            { return proto.CompactTextString(m) }
-func (*GetReply) ProtoMessage()               {}
-func (*GetReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{4} }
-
-func (m *GetReply) GetItem() *CacheItem {
+func (m *CacheRequest) GetIncrement() uint64 {
 	if m != nil {
-		return m.Item
+		return m.Increment
 	}
-	return nil
+	return 0
 }
 
-type AddRequest struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *AddRequest) Reset()                    { *m = AddRequest{} }
-func (m *AddRequest) String() string            { return proto.CompactTextString(m) }
-func (*AddRequest) ProtoMessage()               {}
-func (*AddRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{5} }
-
-func (m *AddRequest) GetItem() *CacheItem {
+func (m *CacheRequest) GetDecrement() uint64 {
 	if m != nil {
-		return m.Item
+		return m.Decrement
 	}
-	return nil
+	return 0
 }
 
-type AddReply struct {
+type CacheResponse struct {
 	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
 }
 
-func (m *AddReply) Reset()                    { *m = AddReply{} }
-func (m *AddReply) String() string            { return proto.CompactTextString(m) }
-func (*AddReply) ProtoMessage()               {}
-func (*AddReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{6} }
+func (m *CacheResponse) Reset()                    { *m = CacheResponse{} }
+func (m *CacheResponse) String() string            { return proto.CompactTextString(m) }
+func (*CacheResponse) ProtoMessage()               {}
+func (*CacheResponse) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
 
-func (m *AddReply) GetItem() *CacheItem {
-	if m != nil {
-		return m.Item
-	}
-	return nil
-}
-
-type ReplaceRequest struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *ReplaceRequest) Reset()                    { *m = ReplaceRequest{} }
-func (m *ReplaceRequest) String() string            { return proto.CompactTextString(m) }
-func (*ReplaceRequest) ProtoMessage()               {}
-func (*ReplaceRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{7} }
-
-func (m *ReplaceRequest) GetItem() *CacheItem {
-	if m != nil {
-		return m.Item
-	}
-	return nil
-}
-
-type ReplaceReply struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *ReplaceReply) Reset()                    { *m = ReplaceReply{} }
-func (m *ReplaceReply) String() string            { return proto.CompactTextString(m) }
-func (*ReplaceReply) ProtoMessage()               {}
-func (*ReplaceReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{8} }
-
-func (m *ReplaceReply) GetItem() *CacheItem {
-	if m != nil {
-		return m.Item
-	}
-	return nil
-}
-
-type TouchRequest struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *TouchRequest) Reset()                    { *m = TouchRequest{} }
-func (m *TouchRequest) String() string            { return proto.CompactTextString(m) }
-func (*TouchRequest) ProtoMessage()               {}
-func (*TouchRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{9} }
-
-func (m *TouchRequest) GetItem() *CacheItem {
-	if m != nil {
-		return m.Item
-	}
-	return nil
-}
-
-type TouchReply struct {
-	Item *CacheItem `protobuf:"bytes,1,opt,name=item" json:"item,omitempty"`
-}
-
-func (m *TouchReply) Reset()                    { *m = TouchReply{} }
-func (m *TouchReply) String() string            { return proto.CompactTextString(m) }
-func (*TouchReply) ProtoMessage()               {}
-func (*TouchReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{10} }
-
-func (m *TouchReply) GetItem() *CacheItem {
+func (m *CacheResponse) GetItem() *CacheItem {
 	if m != nil {
 		return m.Item
 	}
@@ -248,16 +203,9 @@ func (m *TouchReply) GetItem() *CacheItem {
 
 func init() {
 	proto.RegisterType((*CacheItem)(nil), "cache.CacheItem")
-	proto.RegisterType((*SetRequest)(nil), "cache.SetRequest")
-	proto.RegisterType((*SetReply)(nil), "cache.SetReply")
-	proto.RegisterType((*GetRequest)(nil), "cache.GetRequest")
-	proto.RegisterType((*GetReply)(nil), "cache.GetReply")
-	proto.RegisterType((*AddRequest)(nil), "cache.AddRequest")
-	proto.RegisterType((*AddReply)(nil), "cache.AddReply")
-	proto.RegisterType((*ReplaceRequest)(nil), "cache.ReplaceRequest")
-	proto.RegisterType((*ReplaceReply)(nil), "cache.ReplaceReply")
-	proto.RegisterType((*TouchRequest)(nil), "cache.TouchRequest")
-	proto.RegisterType((*TouchReply)(nil), "cache.TouchReply")
+	proto.RegisterType((*CacheRequest)(nil), "cache.CacheRequest")
+	proto.RegisterType((*CacheResponse)(nil), "cache.CacheResponse")
+	proto.RegisterEnum("cache.CacheRequest_Operation", CacheRequest_Operation_name, CacheRequest_Operation_value)
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -271,11 +219,19 @@ const _ = grpc.SupportPackageIsVersion4
 // Client API for Cache service
 
 type CacheClient interface {
-	Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error)
-	Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetReply, error)
-	Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error)
-	Replace(ctx context.Context, in *ReplaceRequest, opts ...grpc.CallOption) (*ReplaceReply, error)
-	Touch(ctx context.Context, in *TouchRequest, opts ...grpc.CallOption) (*TouchReply, error)
+	Call(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Set(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Cas(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Get(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Add(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Replace(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Delete(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Touch(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Append(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Prepend(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Increment(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	Decrement(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
+	FlushAll(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error)
 }
 
 type cacheClient struct {
@@ -286,8 +242,17 @@ func NewCacheClient(cc *grpc.ClientConn) CacheClient {
 	return &cacheClient{cc}
 }
 
-func (c *cacheClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.CallOption) (*SetReply, error) {
-	out := new(SetReply)
+func (c *cacheClient) Call(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/Call", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) Set(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
 	err := grpc.Invoke(ctx, "/cache.Cache/Set", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -295,8 +260,17 @@ func (c *cacheClient) Set(ctx context.Context, in *SetRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *cacheClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.CallOption) (*GetReply, error) {
-	out := new(GetReply)
+func (c *cacheClient) Cas(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/Cas", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) Get(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
 	err := grpc.Invoke(ctx, "/cache.Cache/Get", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -304,8 +278,8 @@ func (c *cacheClient) Get(ctx context.Context, in *GetRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *cacheClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.CallOption) (*AddReply, error) {
-	out := new(AddReply)
+func (c *cacheClient) Add(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
 	err := grpc.Invoke(ctx, "/cache.Cache/Add", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -313,8 +287,8 @@ func (c *cacheClient) Add(ctx context.Context, in *AddRequest, opts ...grpc.Call
 	return out, nil
 }
 
-func (c *cacheClient) Replace(ctx context.Context, in *ReplaceRequest, opts ...grpc.CallOption) (*ReplaceReply, error) {
-	out := new(ReplaceReply)
+func (c *cacheClient) Replace(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
 	err := grpc.Invoke(ctx, "/cache.Cache/Replace", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
@@ -322,9 +296,63 @@ func (c *cacheClient) Replace(ctx context.Context, in *ReplaceRequest, opts ...g
 	return out, nil
 }
 
-func (c *cacheClient) Touch(ctx context.Context, in *TouchRequest, opts ...grpc.CallOption) (*TouchReply, error) {
-	out := new(TouchReply)
+func (c *cacheClient) Delete(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/Delete", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) Touch(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
 	err := grpc.Invoke(ctx, "/cache.Cache/Touch", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) Append(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/Append", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) Prepend(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/Prepend", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) Increment(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/Increment", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) Decrement(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/Decrement", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *cacheClient) FlushAll(ctx context.Context, in *CacheRequest, opts ...grpc.CallOption) (*CacheResponse, error) {
+	out := new(CacheResponse)
+	err := grpc.Invoke(ctx, "/cache.Cache/FlushAll", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -334,19 +362,45 @@ func (c *cacheClient) Touch(ctx context.Context, in *TouchRequest, opts ...grpc.
 // Server API for Cache service
 
 type CacheServer interface {
-	Set(context.Context, *SetRequest) (*SetReply, error)
-	Get(context.Context, *GetRequest) (*GetReply, error)
-	Add(context.Context, *AddRequest) (*AddReply, error)
-	Replace(context.Context, *ReplaceRequest) (*ReplaceReply, error)
-	Touch(context.Context, *TouchRequest) (*TouchReply, error)
+	Call(context.Context, *CacheRequest) (*CacheResponse, error)
+	Set(context.Context, *CacheRequest) (*CacheResponse, error)
+	Cas(context.Context, *CacheRequest) (*CacheResponse, error)
+	Get(context.Context, *CacheRequest) (*CacheResponse, error)
+	Add(context.Context, *CacheRequest) (*CacheResponse, error)
+	Replace(context.Context, *CacheRequest) (*CacheResponse, error)
+	Delete(context.Context, *CacheRequest) (*CacheResponse, error)
+	Touch(context.Context, *CacheRequest) (*CacheResponse, error)
+	Append(context.Context, *CacheRequest) (*CacheResponse, error)
+	Prepend(context.Context, *CacheRequest) (*CacheResponse, error)
+	Increment(context.Context, *CacheRequest) (*CacheResponse, error)
+	Decrement(context.Context, *CacheRequest) (*CacheResponse, error)
+	FlushAll(context.Context, *CacheRequest) (*CacheResponse, error)
 }
 
 func RegisterCacheServer(s *grpc.Server, srv CacheServer) {
 	s.RegisterService(&_Cache_serviceDesc, srv)
 }
 
+func _Cache_Call_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).Call(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/Call",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).Call(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Cache_Set_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SetRequest)
+	in := new(CacheRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -358,13 +412,31 @@ func _Cache_Set_Handler(srv interface{}, ctx context.Context, dec func(interface
 		FullMethod: "/cache.Cache/Set",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Set(ctx, req.(*SetRequest))
+		return srv.(CacheServer).Set(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cache_Cas_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).Cas(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/Cas",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).Cas(ctx, req.(*CacheRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Cache_Get_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetRequest)
+	in := new(CacheRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -376,13 +448,13 @@ func _Cache_Get_Handler(srv interface{}, ctx context.Context, dec func(interface
 		FullMethod: "/cache.Cache/Get",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Get(ctx, req.(*GetRequest))
+		return srv.(CacheServer).Get(ctx, req.(*CacheRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Cache_Add_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddRequest)
+	in := new(CacheRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -394,13 +466,13 @@ func _Cache_Add_Handler(srv interface{}, ctx context.Context, dec func(interface
 		FullMethod: "/cache.Cache/Add",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Add(ctx, req.(*AddRequest))
+		return srv.(CacheServer).Add(ctx, req.(*CacheRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Cache_Replace_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ReplaceRequest)
+	in := new(CacheRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -412,13 +484,31 @@ func _Cache_Replace_Handler(srv interface{}, ctx context.Context, dec func(inter
 		FullMethod: "/cache.Cache/Replace",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Replace(ctx, req.(*ReplaceRequest))
+		return srv.(CacheServer).Replace(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cache_Delete_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).Delete(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/Delete",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).Delete(ctx, req.(*CacheRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
 func _Cache_Touch_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TouchRequest)
+	in := new(CacheRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -430,7 +520,97 @@ func _Cache_Touch_Handler(srv interface{}, ctx context.Context, dec func(interfa
 		FullMethod: "/cache.Cache/Touch",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(CacheServer).Touch(ctx, req.(*TouchRequest))
+		return srv.(CacheServer).Touch(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cache_Append_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).Append(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/Append",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).Append(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cache_Prepend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).Prepend(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/Prepend",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).Prepend(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cache_Increment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).Increment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/Increment",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).Increment(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cache_Decrement_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).Decrement(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/Decrement",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).Decrement(ctx, req.(*CacheRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Cache_FlushAll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CacheRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CacheServer).FlushAll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/cache.Cache/FlushAll",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CacheServer).FlushAll(ctx, req.(*CacheRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -440,8 +620,16 @@ var _Cache_serviceDesc = grpc.ServiceDesc{
 	HandlerType: (*CacheServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "Call",
+			Handler:    _Cache_Call_Handler,
+		},
+		{
 			MethodName: "Set",
 			Handler:    _Cache_Set_Handler,
+		},
+		{
+			MethodName: "Cas",
+			Handler:    _Cache_Cas_Handler,
 		},
 		{
 			MethodName: "Get",
@@ -456,8 +644,32 @@ var _Cache_serviceDesc = grpc.ServiceDesc{
 			Handler:    _Cache_Replace_Handler,
 		},
 		{
+			MethodName: "Delete",
+			Handler:    _Cache_Delete_Handler,
+		},
+		{
 			MethodName: "Touch",
 			Handler:    _Cache_Touch_Handler,
+		},
+		{
+			MethodName: "Append",
+			Handler:    _Cache_Append_Handler,
+		},
+		{
+			MethodName: "Prepend",
+			Handler:    _Cache_Prepend_Handler,
+		},
+		{
+			MethodName: "Increment",
+			Handler:    _Cache_Increment_Handler,
+		},
+		{
+			MethodName: "Decrement",
+			Handler:    _Cache_Decrement_Handler,
+		},
+		{
+			MethodName: "FlushAll",
+			Handler:    _Cache_FlushAll_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -467,24 +679,35 @@ var _Cache_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("cache.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 301 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x93, 0xc1, 0x4f, 0x83, 0x30,
-	0x14, 0xc6, 0x87, 0x0c, 0x75, 0x6f, 0x44, 0xb7, 0xaa, 0x09, 0xe1, 0x44, 0x88, 0x07, 0x12, 0x93,
-	0x45, 0xeb, 0xa2, 0xe7, 0xc5, 0x43, 0xe3, 0xb5, 0x33, 0xf1, 0x5c, 0xcb, 0x4b, 0x66, 0x64, 0x01,
-	0xa5, 0x98, 0xf0, 0xaf, 0x7b, 0x32, 0x2d, 0x8c, 0x81, 0x5e, 0x60, 0xb7, 0xd7, 0xef, 0x7d, 0x1f,
-	0x3f, 0x78, 0x8f, 0xc2, 0x54, 0x0a, 0xb9, 0xc1, 0x45, 0xf6, 0x95, 0xaa, 0x94, 0x38, 0xe6, 0x10,
-	0xbe, 0xc2, 0xe4, 0x49, 0x17, 0xcf, 0x0a, 0xb7, 0x64, 0x06, 0xf6, 0x07, 0x96, 0x9e, 0x15, 0x58,
-	0xd1, 0x84, 0xeb, 0x92, 0x5c, 0x82, 0xf3, 0x2d, 0x92, 0x02, 0xbd, 0xa3, 0xc0, 0x8a, 0x5c, 0x5e,
-	0x1d, 0xb4, 0x4f, 0xa9, 0xc4, 0xb3, 0x03, 0x2b, 0xb2, 0xb9, 0x2e, 0xb5, 0x22, 0x45, 0xee, 0x8d,
-	0x2b, 0x45, 0x8a, 0x3c, 0xa4, 0x00, 0x6b, 0x54, 0x1c, 0x3f, 0x0b, 0xcc, 0x15, 0xb9, 0x86, 0xf1,
-	0xbb, 0xc2, 0xad, 0x79, 0xf4, 0x94, 0xce, 0x16, 0xd5, 0x9b, 0x34, 0x64, 0x6e, 0xba, 0xe1, 0x2d,
-	0x9c, 0x9a, 0x4c, 0x96, 0x94, 0x3d, 0x13, 0x14, 0x80, 0x1d, 0x40, 0x61, 0x83, 0x29, 0xab, 0x38,
-	0x1e, 0x4c, 0x31, 0x99, 0xfe, 0x94, 0x07, 0x38, 0xd3, 0x76, 0x21, 0x71, 0x18, 0x69, 0x09, 0x6e,
-	0x93, 0xeb, 0x4f, 0x5b, 0x82, 0xfb, 0x92, 0x16, 0x72, 0x33, 0x8c, 0x45, 0x01, 0xea, 0x54, 0x6f,
-	0x12, 0xfd, 0xb1, 0xc0, 0x31, 0x1a, 0xb9, 0x01, 0x7b, 0x8d, 0x8a, 0xcc, 0x6b, 0xe3, 0xfe, 0xff,
-	0xf0, 0xcf, 0xdb, 0x52, 0x96, 0x94, 0xe1, 0x48, 0x9b, 0x59, 0xcb, 0xcc, 0xfe, 0x9b, 0x59, 0xc7,
-	0xbc, 0x8a, 0xe3, 0xc6, 0xbc, 0xdf, 0x56, 0x63, 0xde, 0x2d, 0x23, 0x1c, 0x91, 0x47, 0x38, 0xa9,
-	0x07, 0x46, 0xae, 0xea, 0x6e, 0x77, 0xf0, 0xfe, 0xc5, 0x5f, 0xb9, 0x0a, 0xde, 0x81, 0x63, 0xbe,
-	0x9e, 0xec, 0xfa, 0xed, 0x09, 0xfa, 0xf3, 0xae, 0x68, 0x22, 0x6f, 0xc7, 0xe6, 0xb6, 0xdd, 0xff,
-	0x06, 0x00, 0x00, 0xff, 0xff, 0xf7, 0x35, 0x4f, 0x79, 0x7c, 0x03, 0x00, 0x00,
+	// 469 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x54, 0x4f, 0x8b, 0xd3, 0x40,
+	0x14, 0xdf, 0x34, 0x7f, 0xda, 0xbc, 0x76, 0x65, 0x18, 0x17, 0x09, 0xa2, 0x50, 0x82, 0x87, 0x9e,
+	0x7a, 0xe8, 0xba, 0x2a, 0x78, 0x0a, 0xc9, 0xec, 0x6e, 0x21, 0x76, 0xc3, 0x34, 0x8b, 0xe7, 0x31,
+	0x7d, 0xd0, 0x62, 0x9a, 0xc4, 0x66, 0x2a, 0xf8, 0x4d, 0xfc, 0x52, 0x7e, 0x21, 0x4f, 0x32, 0x93,
+	0xb6, 0xbb, 0x82, 0x08, 0xb3, 0xb7, 0xdf, 0x9f, 0xf7, 0xcb, 0x7b, 0x79, 0x99, 0x09, 0x0c, 0x0b,
+	0x51, 0xac, 0x71, 0xda, 0xec, 0x6a, 0x59, 0x53, 0x57, 0x93, 0xf0, 0x33, 0xf8, 0xb1, 0x02, 0x73,
+	0x89, 0x5b, 0x4a, 0xc0, 0xfe, 0x8a, 0x3f, 0x02, 0x6b, 0x6c, 0x4d, 0x7c, 0xae, 0x20, 0xbd, 0x00,
+	0xf7, 0xbb, 0x28, 0xf7, 0x18, 0xf4, 0xc6, 0xd6, 0x64, 0xc4, 0x3b, 0xa2, 0xea, 0xa4, 0x2c, 0x03,
+	0x7b, 0x6c, 0x4d, 0x6c, 0xae, 0xa0, 0x52, 0x0a, 0xd1, 0x06, 0x4e, 0xa7, 0x14, 0xa2, 0x0d, 0x7f,
+	0xf7, 0x60, 0xa4, 0x9f, 0xcc, 0xf1, 0xdb, 0x1e, 0x5b, 0x49, 0x3f, 0x82, 0x5f, 0x37, 0xb8, 0x13,
+	0x72, 0x53, 0x57, 0xba, 0xc5, 0xb3, 0xd9, 0xeb, 0x69, 0x37, 0xd1, 0xe3, 0xba, 0xe9, 0xdd, 0xb1,
+	0x88, 0x3f, 0xd4, 0xd3, 0x37, 0xe0, 0x6c, 0x24, 0x6e, 0xf5, 0x18, 0xc3, 0x19, 0x79, 0x9c, 0x53,
+	0x93, 0x73, 0xed, 0xd2, 0x17, 0xe0, 0x89, 0xa6, 0xc1, 0x6a, 0xa5, 0x47, 0x1b, 0xf1, 0x03, 0xa3,
+	0x01, 0xf4, 0x9b, 0x1d, 0x6a, 0xc3, 0xd1, 0xc6, 0x91, 0xd2, 0x57, 0xe0, 0x6f, 0xaa, 0x62, 0x87,
+	0x5b, 0xac, 0x64, 0xe0, 0x8e, 0xad, 0x89, 0xc3, 0x1f, 0x04, 0xe5, 0xae, 0xf0, 0xe8, 0x7a, 0x9d,
+	0x7b, 0x12, 0xc2, 0x9f, 0x16, 0xf8, 0xa7, 0x61, 0x69, 0x1f, 0xec, 0x25, 0xcb, 0xc9, 0x99, 0x02,
+	0x71, 0xb4, 0x24, 0x96, 0x02, 0x37, 0x2c, 0x27, 0x3d, 0x05, 0xa2, 0x24, 0x21, 0x36, 0x1d, 0x42,
+	0x9f, 0xb3, 0x2c, 0x8d, 0x62, 0x46, 0x1c, 0x0a, 0xe0, 0x25, 0x2c, 0x65, 0x39, 0x23, 0x2e, 0xf5,
+	0xc1, 0xcd, 0xef, 0xee, 0xe3, 0x5b, 0xe2, 0x29, 0x39, 0xca, 0x32, 0xb6, 0x48, 0x48, 0x5f, 0xd5,
+	0x67, 0x9c, 0x69, 0x32, 0xa0, 0xe7, 0xe0, 0xcf, 0x17, 0x31, 0x67, 0x9f, 0xd8, 0x22, 0x27, 0xbe,
+	0xa2, 0x09, 0x3b, 0x52, 0xa0, 0x23, 0x18, 0x5c, 0xa7, 0xf7, 0xcb, 0xdb, 0x28, 0x4d, 0xc9, 0x30,
+	0xbc, 0x82, 0xf3, 0xc3, 0x4e, 0xdb, 0xa6, 0xae, 0x5a, 0x3c, 0xed, 0xcf, 0xfa, 0xdf, 0xfe, 0x66,
+	0xbf, 0x5c, 0x70, 0xb5, 0x46, 0x2f, 0xc1, 0x89, 0x45, 0x59, 0xd2, 0xe7, 0xff, 0xf8, 0x42, 0x2f,
+	0x2f, 0xfe, 0x16, 0xbb, 0x16, 0xe1, 0x19, 0x9d, 0x81, 0xbd, 0x44, 0x69, 0x9c, 0x89, 0x45, 0x6b,
+	0x9c, 0xb9, 0x79, 0x42, 0x9f, 0x68, 0xb5, 0x32, 0xcb, 0xbc, 0x83, 0x3e, 0xc7, 0xa6, 0x14, 0x05,
+	0x9a, 0xe5, 0xae, 0xc0, 0x4b, 0xb0, 0x44, 0x69, 0x18, 0x7b, 0x0b, 0x6e, 0x5e, 0xef, 0x8b, 0xb5,
+	0x71, 0xb3, 0xa8, 0x3b, 0xe5, 0xa6, 0xef, 0x96, 0x1d, 0xee, 0x80, 0x51, 0xee, 0x03, 0xf8, 0xf3,
+	0xd3, 0xfd, 0x30, 0x4d, 0x26, 0xf8, 0xa4, 0xe4, 0x7b, 0x18, 0x5c, 0x97, 0xfb, 0x76, 0x1d, 0x19,
+	0x1e, 0xc8, 0x2f, 0x9e, 0xfe, 0xd5, 0x5d, 0xfe, 0x09, 0x00, 0x00, 0xff, 0xff, 0x86, 0x9e, 0x81,
+	0xa4, 0xf9, 0x04, 0x00, 0x00,
 }

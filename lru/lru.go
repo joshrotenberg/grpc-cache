@@ -62,11 +62,12 @@ type Cache struct {
 	sync.Mutex
 	maxEntries      int
 	evictionHandler EvictionHandler
-	ll              *list.List
+	lruList         *list.List
 	cache           map[string]*list.Element
 	casID           uint64
 }
 
+// entry represents a an entry in the cache.
 type entry struct {
 	key       string
 	value     []byte
@@ -78,6 +79,7 @@ type entry struct {
 // EvictionReason encapsulates the reason for an eviction in an evictionHandler
 type EvictionReason int
 
+// String stringifies the EvictionReason
 func (e EvictionReason) String() string {
 	switch e {
 	case LRUEviction:
@@ -120,7 +122,7 @@ var ErrExists = errors.New("item exists")
 func New(maxEntries int) *Cache {
 	return &Cache{
 		maxEntries: maxEntries,
-		ll:         list.New(),
+		lruList:    list.New(),
 		cache:      make(map[string]*list.Element),
 		casID:      0,
 	}
@@ -139,7 +141,7 @@ func (c *Cache) WithEvictionHandler(h EvictionHandler) *Cache {
 func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 	// key already exists, update values and move to the front
 	if ee, ok := c.cache[key]; ok {
-		c.ll.MoveToFront(ee)
+		c.lruList.MoveToFront(ee)
 		ee.Value.(*entry).value = value
 		ee.Value.(*entry).ttl = ttl
 		ee.Value.(*entry).createdAt = time.Now()
@@ -147,7 +149,7 @@ func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 		return
 	}
 	// new entry: create, store and update the LRU
-	ele := c.ll.PushFront(&entry{
+	ele := c.lruList.PushFront(&entry{
 		key:       key,
 		value:     value,
 		ttl:       ttl,
@@ -155,8 +157,8 @@ func (c *Cache) Set(key string, value []byte, ttl time.Duration) {
 		cas:       c.nextCasID(),
 	})
 	c.cache[key] = ele
-	if c.maxEntries != 0 && c.ll.Len() > c.maxEntries {
-		ele := c.ll.Back()
+	if c.maxEntries != 0 && c.lruList.Len() > c.maxEntries {
+		ele := c.lruList.Back()
 		if ele != nil {
 			if c.evictionHandler != nil {
 				c.evictionHandler.HandleEviction(ele.Value.(*entry).key, ele.Value.(*entry).value, LRUEviction)
@@ -214,7 +216,8 @@ func (c *Cache) Cas(key string, value []byte, ttl time.Duration, cas uint64) err
 }
 
 // getElement gets the raw cache entry from the map if it both exists and has
-// not yet expired
+// not yet expired. If the element is still valid, it moves it to the front of
+// the LRU list and returns the raw element.
 func (c *Cache) getElement(key string) *list.Element {
 	if ele, hit := c.cache[key]; hit {
 		if isExpired(ele) {
@@ -224,7 +227,7 @@ func (c *Cache) getElement(key string) *list.Element {
 			c.removeElement(ele)
 			return nil
 		}
-		c.ll.MoveToFront(ele)
+		c.lruList.MoveToFront(ele)
 		return ele
 	}
 	return nil
@@ -341,7 +344,7 @@ func (c *Cache) Delete(key string) {
 
 // FlushAll removes all items from the cache.
 func (c *Cache) FlushAll() {
-	c.ll = nil
+	c.lruList = nil
 	c.cache = nil
 }
 
@@ -367,7 +370,7 @@ func isExpired(e *list.Element) bool {
 
 // removeElement unconditionally removed the element from the cache.
 func (c *Cache) removeElement(e *list.Element) {
-	c.ll.Remove(e)
+	c.lruList.Remove(e)
 	kv := e.Value.(*entry)
 	delete(c.cache, kv.key)
 }

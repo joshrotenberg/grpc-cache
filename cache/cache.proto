@@ -3,11 +3,19 @@ syntax = "proto3";
 package cache;
 
 service Cache {
-  rpc Set(SetRequest) returns (SetReply) {}
-  rpc Get(GetRequest) returns (GetReply) {}
-  rpc Add(AddRequest) returns (AddReply) {}
-  rpc Replace(ReplaceRequest) returns (ReplaceReply) {}
-  rpc Touch(TouchRequest) returns (TouchReply) {}
+  rpc Call(CacheRequest) returns (CacheResponse) {}
+  rpc Set(CacheRequest) returns (CacheResponse) {}
+  rpc Cas(CacheRequest) returns (CacheResponse) {}
+  rpc Get(CacheRequest) returns (CacheResponse) {}
+  rpc Add(CacheRequest) returns (CacheResponse) {}
+  rpc Replace(CacheRequest) returns (CacheResponse) {}
+  rpc Delete(CacheRequest) returns (CacheResponse) {}
+  rpc Touch(CacheRequest) returns (CacheResponse) {}
+  rpc Append(CacheRequest) returns (CacheResponse) {}
+  rpc Prepend(CacheRequest) returns (CacheResponse) {}
+  rpc Increment(CacheRequest) returns (CacheResponse) {}
+  rpc Decrement(CacheRequest) returns (CacheResponse) {}
+  rpc FlushAll(CacheRequest) returns (CacheResponse) {}
 }
 
 // CacheItem encapsulates any in/out cache values into a single message
@@ -20,44 +28,31 @@ message CacheItem {
   int64 cas = 4;
 }
 
-message SetRequest {
-  CacheItem item = 1;
+message CacheRequest {
+  enum Operation {
+    SET = 0;
+    CAS = 1;
+    GET = 2;
+    ADD = 3;
+    REPLACE = 4;
+    DELETE = 5;
+    TOUCH = 6;
+    APPEND = 7;
+    PREPEND = 8;
+    INCREMENT = 9;
+    DECREMENT = 10;
+    FLUSHALL = 11;
+  }
+
+  Operation operation = 1;
+  CacheItem item = 2;
+  bytes append = 3;
+  bytes prepend = 4;
+  uint64 increment = 5;
+  uint64 decrement = 6;
 }
 
-message SetReply {
+message CacheResponse {
   CacheItem item = 1;
 }
-
-message GetRequest {
-  CacheItem item = 1;
-}
-
-message GetReply {
-  CacheItem item = 1;
-}
-
-message AddRequest {
-  CacheItem item = 1;
-}
-
-message AddReply {
-  CacheItem item = 1;
-}
-
-message ReplaceRequest {
-  CacheItem item = 1;
-}
-
-message ReplaceReply {
-  CacheItem item = 1;
-}
-
-message TouchRequest { 
-  CacheItem item = 1;
-}
-
-message TouchReply {
-  CacheItem item = 1;
-}
-
 
