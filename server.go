@@ -61,111 +61,62 @@ func cacheError(err error, op pb.CacheRequest_Operation, key string) error {
 	return err
 }
 
+func cacheResponse(err error, op pb.CacheRequest_Operation, item *pb.CacheItem) (*pb.CacheResponse, error) {
+	if err != nil {
+		return nil, cacheError(err, op, item.Key)
+	}
+	response := &pb.CacheResponse{
+		Item: item,
+	}
+	return response, err
+}
+
 func (s *CacheServer) Call(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 
 	var err error
-
 	s.c.Lock()
 	defer s.c.Unlock()
+
 	switch in.Operation {
 	case pb.CacheRequest_SET:
 		s.c.Set(in.Item.Key, in.Item.Value, time.Duration(in.Item.Ttl)*time.Second)
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(nil, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_CAS:
 		err = s.c.Cas(in.Item.Key, in.Item.Value, time.Duration(in.Item.Ttl)*time.Second, uint64(in.Item.Cas))
-		if err == lru.ErrExists {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_GET:
 		value, err := s.c.Get(in.Item.Key)
-		if err == lru.ErrNotFound {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key, Value: value},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key, Value: value})
+	case pb.CacheRequest_GETS:
+		value, cas, err := s.c.Gets(in.Item.Key)
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key, Value: value, Cas: int64(cas)})
 	case pb.CacheRequest_ADD:
 		err = s.c.Add(in.Item.Key, in.Item.Value, time.Duration(in.Item.Ttl)*time.Second)
-		if err == lru.ErrExists {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_REPLACE:
 		err = s.c.Replace(in.Item.Key, in.Item.Value, time.Duration(in.Item.Ttl)*time.Second)
-		if err == lru.ErrNotFound {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_DELETE:
 		s.c.Delete(in.Item.Key)
-
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(nil, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_TOUCH:
 		err = s.c.Touch(in.Item.Key, time.Duration(in.Item.Ttl)*time.Second)
-		if err == lru.ErrNotFound {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_APPEND:
 		err = s.c.Append(in.Item.Key, in.Append, time.Duration(in.Item.Ttl)*time.Second)
-		if err == lru.ErrNotFound {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_PREPEND:
 		err = s.c.Prepend(in.Item.Key, in.Prepend, time.Duration(in.Item.Ttl)*time.Second)
-		if err == lru.ErrNotFound {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_INCREMENT:
 		err = s.c.Increment(in.Item.Key, in.Increment)
-		if err == lru.ErrNotFound {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_DECREMENT:
 		err = s.c.Decrement(in.Item.Key, in.Decrement)
-		if err == lru.ErrNotFound {
-			return nil, cacheError(err, in.Operation, in.Item.Key)
-		}
-		response := &pb.CacheResponse{
-			Item: &pb.CacheItem{Key: in.Item.Key},
-		}
-		return response, err
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
 	case pb.CacheRequest_FLUSHALL:
 		s.c.FlushAll()
-		return nil, nil
+		return cacheResponse(nil, in.Operation, nil)
 	default:
 		return nil, status.Errorf(codes.Unimplemented, "unrecognized cache command")
 	}
@@ -186,6 +137,11 @@ func (s *CacheServer) Cas(ctx context.Context, in *pb.CacheRequest) (*pb.CacheRe
 // Get gets a key/value pair from the cache.
 func (s *CacheServer) Get(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_GET
+	return s.Call(ctx, in)
+}
+
+func (s *CacheServer) Gets(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
+	in.Operation = pb.CacheRequest_GETS
 	return s.Call(ctx, in)
 }
 

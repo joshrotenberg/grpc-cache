@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"log"
 	"testing"
 
 	pb "github.com/joshrotenberg/grpc-cache/cache"
@@ -27,18 +28,18 @@ func createCacheRequest(operation pb.CacheRequest_Operation, item *pb.CacheItem)
 }
 
 // inits, starts and returns a cache server and a connected client
-func cacheServer(t *testing.T, host string, maxEntries int, done chan bool) (*CacheServer, pb.CacheClient) {
+func cacheServer(host string, maxEntries int, done chan bool) (*CacheServer, pb.CacheClient) {
 	cs := NewCacheServer(maxEntries)
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
-		t.Fatalf("error connecting to server: %s", err)
+		log.Fatalf("error connecting to server: %s", err)
 	}
 
 	cc := pb.NewCacheClient(conn)
 	go func() {
 		cs.Start(host)
 		<-done
-		conn.Close()
+		//		conn.Close()
 		cs.Stop()
 	}()
 	return cs, cc
@@ -46,17 +47,15 @@ func cacheServer(t *testing.T, host string, maxEntries int, done chan bool) (*Ca
 
 func TestSet(t *testing.T) {
 	done := make(chan bool)
-	_, cc := cacheServer(t, defaultHost, 20, done)
+	_, cc := cacheServer(defaultHost, 20, done)
 
-	setItem := createCacheItem("foo", "bar", 1)
-	setRequest := createCacheRequest(pb.CacheRequest_SET, setItem)
+	setRequest := createCacheRequest(pb.CacheRequest_SET, &pb.CacheItem{Key: "foo", Value: []byte("bar")})
 	_, err := cc.Set(context.Background(), setRequest)
 	if err != nil {
 		t.Fatalf("error setting item: %s", err)
 	}
 
-	getItem := createCacheItem("foo", "", 0)
-	getRequest := createCacheRequest(pb.CacheRequest_GET, getItem)
+	getRequest := createCacheRequest(pb.CacheRequest_GET, &pb.CacheItem{Key: "foo"})
 	get, err := cc.Get(context.Background(), getRequest)
 	if err != nil {
 		t.Fatalf("error getting item: %s", err)
@@ -65,6 +64,10 @@ func TestSet(t *testing.T) {
 		t.Fatalf("cache item value wasn't as expected; got %s, expected %s", get.Item.Value, []byte("bar"))
 	}
 	done <- true
+}
+
+func TestCAS(t *testing.T) {
+
 }
 
 /*

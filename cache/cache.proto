@@ -7,6 +7,7 @@ service Cache {
   rpc Set(CacheRequest) returns (CacheResponse) {}
   rpc Cas(CacheRequest) returns (CacheResponse) {}
   rpc Get(CacheRequest) returns (CacheResponse) {}
+  rpc Gets(CacheRequest) returns (CacheResponse) {}
   rpc Add(CacheRequest) returns (CacheResponse) {}
   rpc Replace(CacheRequest) returns (CacheResponse) {}
   rpc Delete(CacheRequest) returns (CacheResponse) {}
@@ -33,15 +34,16 @@ message CacheRequest {
     SET = 0;
     CAS = 1;
     GET = 2;
-    ADD = 3;
-    REPLACE = 4;
-    DELETE = 5;
-    TOUCH = 6;
-    APPEND = 7;
-    PREPEND = 8;
-    INCREMENT = 9;
-    DECREMENT = 10;
-    FLUSHALL = 11;
+    GETS = 3;
+    ADD = 4;
+    REPLACE = 5;
+    DELETE = 6;
+    TOUCH = 7;
+    APPEND = 8;
+    PREPEND = 9;
+    INCREMENT = 10;
+    DECREMENT = 11;
+    FLUSHALL = 12;
   }
 
   Operation operation = 1;
