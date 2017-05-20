@@ -291,3 +291,22 @@ func TestTTL(t *testing.T) {
 		t.Fatal("'foo' should have expired")
 	}
 }
+
+func BenchmarkSet(b *testing.B) {
+	c := New(4096)
+
+	for i := 0; i < b.N; i++ {
+		c.Set("foo", []byte("bench"), 0)
+	}
+
+}
+
+func BenchmarkGet(b *testing.B) {
+	c := New(4096)
+
+	c.Set("foo", []byte("bench"), 0)
+	for i := 0; i < b.N; i++ {
+		c.Get("foo")
+	}
+
+}
