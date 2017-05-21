@@ -12,7 +12,7 @@ import (
 
 const defaultHost = "localhost:5051"
 
-func createCacheItem(key string, value string, ttl int64) *pb.CacheItem {
+func createCacheItem(key string, value string, ttl uint64) *pb.CacheItem {
 
 	item := &pb.CacheItem{
 		Key:   key,

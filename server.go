@@ -89,7 +89,7 @@ func (s *CacheServer) Call(ctx context.Context, in *pb.CacheRequest) (*pb.CacheR
 		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key, Value: value})
 	case pb.CacheRequest_GETS:
 		value, cas, err := s.c.Gets(in.Item.Key)
-		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key, Value: value, Cas: int64(cas)})
+		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key, Value: value, Cas: cas})
 	case pb.CacheRequest_ADD:
 		err = s.c.Add(in.Item.Key, in.Item.Value, time.Duration(in.Item.Ttl)*time.Second)
 		return cacheResponse(err, in.Operation, &pb.CacheItem{Key: in.Item.Key})
