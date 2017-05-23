@@ -3,7 +3,9 @@ package server
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"log"
+	"net"
 	"testing"
 
 	pb "github.com/joshrotenberg/grpc-cache/cache"
@@ -28,26 +30,49 @@ func createCacheRequest(operation pb.CacheRequest_Operation, item *pb.CacheItem)
 }
 
 // inits, starts and returns a cache server and a connected client
-func cacheServer(host string, maxEntries int, done chan bool) (*CacheServer, pb.CacheClient) {
+func startCacheServer(host string, maxEntries int, done chan bool) *CacheServer {
 	cs := NewCacheServer(maxEntries)
+	go func() {
+		cs.Start(host)
+		<-done
+		cs.Stop()
+	}()
+	return cs
+}
+
+func cacheClient(host string) pb.CacheClient {
+
 	conn, err := grpc.Dial(host, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("error connecting to server: %s", err)
 	}
 
 	cc := pb.NewCacheClient(conn)
-	go func() {
-		cs.Start(host)
-		<-done
-		//		conn.Close()
-		cs.Stop()
-	}()
-	return cs, cc
+	return cc
+}
+
+func getPort() string {
+
+	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
+	if err != nil {
+		panic(err)
+	}
+
+	l, err := net.ListenTCP("tcp", addr)
+	if err != nil {
+		panic(err)
+	}
+	defer l.Close()
+	return fmt.Sprintf(":%d", l.Addr().(*net.TCPAddr).Port)
 }
 
 func TestSet(t *testing.T) {
+	t.Log(getPort())
+	host := getPort()
+
 	done := make(chan bool)
-	_, cc := cacheServer(defaultHost, 20, done)
+	startCacheServer(host, 20, done)
+	cc := cacheClient(host)
 
 	setRequest := createCacheRequest(pb.CacheRequest_SET, &pb.CacheItem{Key: "foo", Value: []byte("bar")})
 	_, err := cc.Set(context.Background(), setRequest)
@@ -56,17 +81,81 @@ func TestSet(t *testing.T) {
 	}
 
 	getRequest := createCacheRequest(pb.CacheRequest_GET, &pb.CacheItem{Key: "foo"})
-	get, err := cc.Get(context.Background(), getRequest)
+	getResponse, err := cc.Get(context.Background(), getRequest)
 	if err != nil {
 		t.Fatalf("error getting item: %s", err)
 	}
-	if bytes.Compare(get.Item.Value, []byte("bar")) != 0 {
-		t.Fatalf("cache item value wasn't as expected; got %s, expected %s", get.Item.Value, []byte("bar"))
+	item := getResponse.Item
+	if bytes.Compare(item.Value, []byte("bar")) != 0 {
+		t.Fatalf("cache item value wasn't as expected; got %s, expected %s", item.Value, []byte("bar"))
+	}
+	//done <- true
+}
+
+func TestCAS(t *testing.T) {
+
+	host := getPort()
+	done := make(chan bool)
+	startCacheServer(host, 20, done)
+	cc := cacheClient(host)
+
+	// set something initially
+	setRequest := createCacheRequest(pb.CacheRequest_SET, &pb.CacheItem{Key: "foo", Value: []byte("bar")})
+	_, err := cc.Set(context.Background(), setRequest)
+	if err != nil {
+		t.Fatalf("error setting item: %s", err)
+	}
+
+	// now get it along with the cas value
+	getsRequest := createCacheRequest(pb.CacheRequest_GETS, &pb.CacheItem{Key: "foo"})
+	getsResponse, err := cc.Gets(context.Background(), getsRequest)
+	if err != nil {
+		t.Fatalf("error getting item: %s", err)
+	}
+
+	item := getsResponse.Item
+	if bytes.Compare(item.Value, []byte("bar")) != 0 {
+		t.Fatalf("cache item value wasn't as expected; got %s, expected %s", item.Value, []byte("bar"))
+	}
+	// this is the first thing we set in this cache so we know the cas should be 1
+	if item.Cas != 1 {
+		t.Fatalf("cas should have been 1 but it was %d", item.Cas)
+	}
+
+	// set something again with the same key and provide the cas value
+	casRequest := createCacheRequest(pb.CacheRequest_CAS, &pb.CacheItem{Key: "foo", Value: []byte("bluh"), Cas: 1})
+	casResponse, err := cc.Cas(context.Background(), casRequest)
+	if err != nil {
+		t.Fatalf("error CASing item: %s", err)
+	}
+	item = casResponse.Item
+
+	// pull it back out again
+	getsRequest = createCacheRequest(pb.CacheRequest_GETS, &pb.CacheItem{Key: "foo"})
+	getsResponse, err = cc.Gets(context.Background(), getsRequest)
+	if err != nil {
+		t.Fatalf("error getting item: %s", err)
+	}
+
+	item = getsResponse.Item
+	if bytes.Compare(item.Value, []byte("bluh")) != 0 {
+		t.Fatalf("cache item value wasn't as expected; got %s, expected %s", item.Value, []byte("bluh"))
+	}
+	// the cas should have been incremented
+	if item.Cas != 2 {
+		t.Fatalf("cas should have been 2 but it was %d", item.Cas)
+	}
+
+	// now try to set something again with the key but provide a cas that definitely isn't right. the set should fail
+	casRequest = createCacheRequest(pb.CacheRequest_CAS, &pb.CacheItem{Key: "foo", Value: []byte("nope"), Cas: 9})
+	casResponse, err = cc.Cas(context.Background(), casRequest)
+	if err == nil {
+		t.Fatal("cas shoud have failed")
 	}
 	done <- true
 }
 
-func TestCAS(t *testing.T) {
+func TestAdd(t *testing.T) {
 
 }
 
