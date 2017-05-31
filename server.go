@@ -19,6 +19,7 @@ import (
 type CacheServer struct {
 	c *lru.Cache
 	s *grpc.Server
+	l *net.Listener
 }
 
 // NewCacheServer returns a new instance of the server. It takes a maxEntries argument,
@@ -39,6 +40,7 @@ func (s *CacheServer) Start(host string) {
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
+
 	go func() {
 		if err := s.s.Serve(lis); err != nil {
 			log.Fatalf("failed to serve: %v", err)

@@ -9,14 +9,42 @@ import (
 	"testing"
 
 	pb "github.com/joshrotenberg/grpc-cache/cache"
+	"github.com/joshrotenberg/grpc-cache/lru"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/status"
 )
 
-const defaultHost = "localhost:5051"
+// ripped off from net/http/httptest/server.go
+func newLocalListener() net.Listener {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		if l, err = net.Listen("tcp6", "[::1]:0"); err != nil {
+			panic(fmt.Sprintf("httptest: failed to listen on a port: %v", err))
+		}
+	}
+	return l
+}
+
+func testSetup(maxEntries int) (*grpc.Server, pb.CacheClient) {
+
+	c := lru.New(maxEntries)
+	s := grpc.NewServer()
+	cs := &CacheServer{c: c, s: s}
+	pb.RegisterCacheServer(s, cs)
+	//reflection.Register(s)
+	l := newLocalListener()
+	go s.Serve(l)
+
+	conn, err := grpc.Dial(l.Addr().String(), grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("error connecting to server: %s", err)
+	}
+
+	cc := pb.NewCacheClient(conn)
+	return s, cc
+}
 
 func createCacheItem(key string, value string, ttl uint64) *pb.CacheItem {
-
 	item := &pb.CacheItem{
 		Key:   key,
 		Value: []byte(value),
@@ -28,43 +56,6 @@ func createCacheItem(key string, value string, ttl uint64) *pb.CacheItem {
 func createCacheRequest(operation pb.CacheRequest_Operation, item *pb.CacheItem) *pb.CacheRequest {
 
 	return &pb.CacheRequest{Operation: operation, Item: item}
-}
-
-// inits, starts and returns a cache server and a connected client
-func startCacheServer(host string, maxEntries int, done chan bool) *CacheServer {
-	cs := NewCacheServer(maxEntries)
-	go func() {
-		cs.Start(host)
-		<-done
-		cs.Stop()
-	}()
-	return cs
-}
-
-func cacheClient(host string) pb.CacheClient {
-
-	conn, err := grpc.Dial(host, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("error connecting to server: %s", err)
-	}
-
-	cc := pb.NewCacheClient(conn)
-	return cc
-}
-
-func getPort() string {
-
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		panic(err)
-	}
-
-	l, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		panic(err)
-	}
-	defer l.Close()
-	return fmt.Sprintf(":%d", l.Addr().(*net.TCPAddr).Port)
 }
 
 func testSet(t *testing.T, cc pb.CacheClient, key string, value string) *pb.CacheResponse {
@@ -92,11 +83,8 @@ func testGet(t *testing.T, cc pb.CacheClient, key string, value string) *pb.Cach
 
 func TestCache(t *testing.T) {
 
-	host := getPort()
-
-	done := make(chan bool)
-	startCacheServer(host, 20, done)
-	cc := cacheClient(host)
+	_, cc := testSetup(20)
+	//defer s.GracefulStop()
 
 	setRes := testSet(t, cc, "foo", "bar")
 	t.Log(setRes)
@@ -105,12 +93,8 @@ func TestCache(t *testing.T) {
 }
 
 func TestSet(t *testing.T) {
-	t.Log(getPort())
-	host := getPort()
-
-	done := make(chan bool)
-	startCacheServer(host, 20, done)
-	cc := cacheClient(host)
+	_, cc := testSetup(20)
+	//defer s.GracefulStop()
 
 	setRequest := createCacheRequest(pb.CacheRequest_SET, &pb.CacheItem{Key: "foo", Value: []byte("bar")})
 	_, err := cc.Set(context.Background(), setRequest)
@@ -127,15 +111,12 @@ func TestSet(t *testing.T) {
 	if bytes.Compare(item.Value, []byte("bar")) != 0 {
 		t.Fatalf("cache item value wasn't as expected; got %s, expected %s", item.Value, []byte("bar"))
 	}
-	done <- true
 }
 
 func TestCAS(t *testing.T) {
 
-	host := getPort()
-	done := make(chan bool)
-	startCacheServer(host, 20, done)
-	cc := cacheClient(host)
+	_, cc := testSetup(20)
+	//defer s.GracefulStop()
 
 	// set something initially
 	setRequest := createCacheRequest(pb.CacheRequest_SET, &pb.CacheItem{Key: "foo", Value: []byte("bar")})
@@ -190,14 +171,12 @@ func TestCAS(t *testing.T) {
 	if err == nil {
 		t.Fatal("cas shoud have failed")
 	}
-	done <- true
 }
 
 func TestAdd(t *testing.T) {
-	host := getPort()
-	done := make(chan bool)
-	startCacheServer(host, 20, done)
-	cc := cacheClient(host)
+
+	_, cc := testSetup(20)
+	//defer s.Stop()
 
 	addRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo", Value: []byte("bar")}}
 	_, err := cc.Add(context.Background(), addRequest)
@@ -213,10 +192,8 @@ func TestAdd(t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
-	host := getPort()
-	done := make(chan bool)
-	startCacheServer(host, 20, done)
-	cc := cacheClient(host)
+	_, cc := testSetup(20)
+	//defer s.GracefulStop()
 
 	replaceRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo", Value: []byte("bar")}}
 	_, err := cc.Replace(context.Background(), replaceRequest)
