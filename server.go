@@ -142,6 +142,7 @@ func (s *CacheServer) Get(ctx context.Context, in *pb.CacheRequest) (*pb.CacheRe
 	return s.Call(ctx, in)
 }
 
+// Gets gets a key/value pair from the cache and includes its CAS value.
 func (s *CacheServer) Gets(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_GETS
 	return s.Call(ctx, in)
