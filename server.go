@@ -73,6 +73,7 @@ func cacheResponse(err error, op pb.CacheRequest_Operation, item *pb.CacheItem) 
 	return response, err
 }
 
+// Call calls the cache operation in in.Operation
 func (s *CacheServer) Call(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 
 	var err error
@@ -120,17 +121,19 @@ func (s *CacheServer) Call(ctx context.Context, in *pb.CacheRequest) (*pb.CacheR
 		s.c.FlushAll()
 		return cacheResponse(nil, in.Operation, nil)
 	default:
-		return nil, status.Errorf(codes.Unimplemented, "unrecognized cache command")
+		return nil, status.Errorf(codes.Unimplemented, "unrecognized cache command %d", in.Operation)
 	}
 
 }
 
-// Set set a key/value pair to the cache.
+// Set stores a key/value pair in the cache.
 func (s *CacheServer) Set(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_SET
 	return s.Call(ctx, in)
 }
 
+// Cas does a "check and set" or "compare and swap" operation. If the given key exists
+// and the currently stored CAS value matches the one supplied, the value is stored.
 func (s *CacheServer) Cas(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_CAS
 	return s.Call(ctx, in)
@@ -160,6 +163,7 @@ func (s *CacheServer) Replace(ctx context.Context, in *pb.CacheRequest) (*pb.Cac
 	return s.Call(ctx, in)
 }
 
+// Delete deletes a key/value pair from the cache.
 func (s *CacheServer) Delete(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_DELETE
 	return s.Call(ctx, in)
@@ -171,26 +175,31 @@ func (s *CacheServer) Touch(ctx context.Context, in *pb.CacheRequest) (*pb.Cache
 	return s.Call(ctx, in)
 }
 
+// Append appends the value to the current value for the key.
 func (s *CacheServer) Append(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_APPEND
 	return s.Call(ctx, in)
 }
 
+// Prepend prepends the value to the current value for the key.
 func (s *CacheServer) Prepend(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_PREPEND
 	return s.Call(ctx, in)
 }
 
+// Increment increments the value for key.
 func (s *CacheServer) Increment(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_INCREMENT
 	return s.Call(ctx, in)
 }
 
+// Decrement decrements the value for the given key.
 func (s *CacheServer) Decrement(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_DECREMENT
 	return s.Call(ctx, in)
 }
 
+// FlushAll deletes all key/value pairs from the cache.
 func (s *CacheServer) FlushAll(ctx context.Context, in *pb.CacheRequest) (*pb.CacheResponse, error) {
 	in.Operation = pb.CacheRequest_FLUSHALL
 	return s.Call(ctx, in)
