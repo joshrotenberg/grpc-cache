@@ -201,7 +201,14 @@ func TestReplace(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error trying to replace an item that doesn't exist")
 	}
-
+	testSet(t, cc, "foo", "bar")
+	replaceRequest = &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo", Value: []byte("rar")}}
+	_, err = cc.Replace(context.Background(), replaceRequest)
+	if err != nil {
+		t.Fatalf("got an error trying to replace an item that should exist: %s", err)
+	}
+	getResponse := testGet(t, cc, "foo", "rar")
+	t.Log(getResponse)
 }
 
 /*
