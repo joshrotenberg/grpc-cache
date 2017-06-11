@@ -67,17 +67,20 @@ func testSet(t *testing.T, cc pb.CacheClient, key string, value string) *pb.Cach
 	return setResponse
 }
 
-func testGet(t *testing.T, cc pb.CacheClient, key string, value string) *pb.CacheResponse {
+func testGet(t *testing.T, cc pb.CacheClient, key string, expectedValue string, expectedErr error) *pb.CacheResponse {
 	getRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: key}}
 	getResponse, err := cc.Get(context.Background(), getRequest)
-	if value == "" && err == nil {
-		t.Fatalf("what")
+	if err != nil {
+		if status, ok := status.FromError(err); ok {
+			t.Logf("error code is %s", status.Code())
+		}
 	}
-	if thing, ok := status.FromError(err); ok {
-		t.Logf("code is %#v", thing.Code())
+	if err != expectedErr {
+		t.Fatalf("get: got %#v, expected %#v", err, expectedErr)
 	}
-
-	t.Log(getResponse, err)
+	if string(getResponse.Item.Value) != expectedValue {
+		t.Fatalf("get: got %s, expected %s", getResponse.Item.Value, expectedValue)
+	}
 	return getResponse
 }
 
@@ -88,10 +91,9 @@ func TestCache(t *testing.T) {
 
 	setRes := testSet(t, cc, "foo", "bar")
 	t.Log(setRes)
-	testGet(t, cc, "foo", "bar")
+	testGet(t, cc, "foo", "bar", nil)
 
 }
-
 func TestSet(t *testing.T) {
 	_, cc := testSetup(20)
 	//defer s.GracefulStop()
@@ -194,10 +196,9 @@ func TestAdd(t *testing.T) {
 func TestReplace(t *testing.T) {
 	_, cc := testSetup(20)
 	//defer s.GracefulStop()
-
 	replaceRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo", Value: []byte("bar")}}
 	_, err := cc.Replace(context.Background(), replaceRequest)
-	t.Logf("%#v", err)
+
 	if err == nil {
 		t.Fatalf("expected an error trying to replace an item that doesn't exist")
 	}
@@ -207,8 +208,105 @@ func TestReplace(t *testing.T) {
 	if err != nil {
 		t.Fatalf("got an error trying to replace an item that should exist: %s", err)
 	}
-	getResponse := testGet(t, cc, "foo", "rar")
-	t.Log(getResponse)
+	testGet(t, cc, "foo", "rar", nil)
+}
+
+func TestDelete(t *testing.T) {
+	_, cc := testSetup(20)
+	testSet(t, cc, "doof", "cha")
+	testGet(t, cc, "doof", "cha", nil)
+
+	deleteRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "doof"}}
+	_, err := cc.Delete(context.Background(), deleteRequest)
+	if err != nil {
+		t.Fatalf("got an error deleting an item: %s", err)
+	}
+
+	getRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "doof"}}
+	_, err = cc.Get(context.Background(), getRequest)
+	if err == nil {
+		t.Fatal("expected an error getting deleted value")
+	}
+}
+
+func TestAppend(t *testing.T) {
+	_, cc := testSetup(20)
+	testSet(t, cc, "doof", "cha")
+	appendRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "doof"}, Append: []byte("yeah")}
+	cc.Append(context.Background(), appendRequest)
+	testGet(t, cc, "doof", "chayeah", nil)
+}
+
+func TestPrepend(t *testing.T) {
+	_, cc := testSetup(20)
+	testSet(t, cc, "doof", "cha")
+	prependRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "doof"}, Prepend: []byte("yeah")}
+	cc.Prepend(context.Background(), prependRequest)
+	testGet(t, cc, "doof", "yeahcha", nil)
+}
+
+func TestIncrement(t *testing.T) {
+	_, cc := testSetup(20)
+	v := lru.Uint64ToBytes(20)
+	setRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo", Value: v}}
+	_, err := cc.Set(context.Background(), setRequest)
+	if err != nil {
+		t.Fatal("error setting value")
+	}
+	getRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo"}}
+	getResponse, err := cc.Get(context.Background(), getRequest)
+	v2, err := lru.BytesToUint64(getResponse.Item.Value)
+	if err != nil {
+		t.Fatalf("error converting value: %s", err)
+	}
+	if v2 != 20 {
+		t.Fatalf("value wasn't as expected: %d != 20", v2)
+	}
+
+	incrementRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo"}, Increment: 23}
+	cc.Increment(context.Background(), incrementRequest)
+
+	getRequest = &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo"}}
+	getResponse, err = cc.Get(context.Background(), getRequest)
+	v3, err := lru.BytesToUint64(getResponse.Item.Value)
+	if err != nil {
+		t.Fatalf("error converting value: %s", err)
+	}
+	if v3 != 43 {
+		t.Fatalf("value wasn't as expected: %d != 43", v3)
+	}
+}
+
+func TestDecrement(t *testing.T) {
+	_, cc := testSetup(20)
+	v := lru.Uint64ToBytes(43)
+	setRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo", Value: v}}
+	_, err := cc.Set(context.Background(), setRequest)
+	if err != nil {
+		t.Fatal("error setting value")
+	}
+	getRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo"}}
+	getResponse, err := cc.Get(context.Background(), getRequest)
+	v2, err := lru.BytesToUint64(getResponse.Item.Value)
+	if err != nil {
+		t.Fatalf("error converting value: %s", err)
+	}
+	if v2 != 43 {
+		t.Fatalf("value wasn't as expected: %d != 43", v2)
+	}
+
+	decrementRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo"}, Decrement: 23}
+	cc.Decrement(context.Background(), decrementRequest)
+
+	getRequest = &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo"}}
+	getResponse, err = cc.Get(context.Background(), getRequest)
+	v3, err := lru.BytesToUint64(getResponse.Item.Value)
+	if err != nil {
+		t.Fatalf("error converting value: %s", err)
+	}
+	if v3 != 20 {
+		t.Fatalf("value wasn't as expected: %d != 20", v3)
+	}
 }
 
 /*
