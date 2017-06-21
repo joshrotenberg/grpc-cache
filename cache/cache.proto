@@ -31,19 +31,20 @@ message CacheItem {
 
 message CacheRequest {
   enum Operation {
-    SET = 0;
-    CAS = 1;
-    GET = 2;
-    GETS = 3;
-    ADD = 4;
-    REPLACE = 5;
-    DELETE = 6;
-    TOUCH = 7;
-    APPEND = 8;
-    PREPEND = 9;
-    INCREMENT = 10;
-    DECREMENT = 11;
-    FLUSHALL = 12;
+    NOOP = 0;
+    SET = 1;
+    CAS = 2;
+    GET = 3;
+    GETS = 4;
+    ADD = 5;
+    REPLACE = 6;
+    DELETE = 7;
+    TOUCH = 8;
+    APPEND = 9;
+    PREPEND = 10;
+    INCREMENT = 11;
+    DECREMENT = 12;
+    FLUSHALL = 13;
   }
 
   Operation operation = 1;
