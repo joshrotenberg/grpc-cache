@@ -28,14 +28,11 @@ func newLocalListener() net.Listener {
 
 func testSetup(maxEntries int) pb.CacheClient {
 
-	c := lru.New(maxEntries)
-	s := grpc.NewServer()
-	cs := &CacheServer{cache: c, grpcServer: s}
-	pb.RegisterCacheServer(s, cs)
-	l := newLocalListener()
-	go s.Serve(l)
+	listener := newLocalListener()
+	s2 := NewWithListener(listener, maxEntries)
+	s2.Start()
 
-	conn, err := grpc.Dial(l.Addr().String(), grpc.WithInsecure())
+	conn, err := grpc.Dial(listener.Addr().String(), grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("error connecting to server: %s", err)
 	}
