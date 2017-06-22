@@ -21,6 +21,8 @@ type CacheServer struct {
 	listener   net.Listener
 }
 
+// NewWithListener returns a new instance of the server given an initialized listener and
+// maxEntries for the cache.
 func NewWithListener(listener net.Listener, maxEntries int) *CacheServer {
 	grpcServer := grpc.NewServer()
 	server := CacheServer{
