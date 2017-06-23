@@ -87,6 +87,8 @@ func (s *CacheServer) Call(ctx context.Context, in *pb.CacheRequest) (*pb.CacheR
 	defer s.cache.Unlock()
 
 	switch in.Operation {
+	case pb.CacheRequest_NOOP:
+		return cacheResponse(nil, in.Operation, in.Item)
 	case pb.CacheRequest_SET:
 		s.cache.Set(in.Item.Key, in.Item.Value, time.Duration(in.Item.Ttl)*time.Second)
 		return cacheResponse(nil, in.Operation, &pb.CacheItem{Key: in.Item.Key})
