@@ -54,6 +54,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -350,8 +351,8 @@ func (c *Cache) FlushAll() {
 
 // nextCasId increments and returns the next cas id.
 func (c *Cache) nextCasID() uint64 {
-	c.casID++
-	return c.casID
+	atomic.AddUint64(&c.casID, 1)
+	return atomic.LoadUint64(&c.casID)
 }
 
 // isExpired returns true if the item exists and is expired, false otherwise.
