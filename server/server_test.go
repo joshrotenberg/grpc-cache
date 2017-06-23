@@ -8,6 +8,8 @@ import (
 	"net"
 	"testing"
 
+	"reflect"
+
 	pb "github.com/joshrotenberg/grpc-cache/cache"
 	"github.com/joshrotenberg/grpc-cache/lru"
 	"google.golang.org/grpc"
@@ -316,4 +318,19 @@ func TestFlushAll(t *testing.T) {
 		t.Fatalf("flush all failed: %v", err)
 	}
 	t.Log(flushAllResponse)
+}
+
+func TestNoop(t *testing.T) {
+	cc := testSetup(0)
+	noopItem := &pb.CacheItem{Key: "doesn't matter", Value: []byte("stuff")}
+	// if no operation is specified (either through CacheRequest.Operation in the request or
+	// via the wrapper call) the call will simply return the supplied cache item
+	noopRequest := &pb.CacheRequest{Item: noopItem}
+	noopResponse, err := cc.Call(context.Background(), noopRequest)
+	if err != nil {
+		t.Fatalf("noop request failed: %v", err)
+	}
+	if reflect.DeepEqual(noopResponse.GetItem(), noopItem) != true {
+		t.Fatal("items didn't match")
+	}
 }
