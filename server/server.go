@@ -16,7 +16,6 @@ import (
 
 // CacheServer encapsulates the cache server things.
 type CacheServer struct {
-	something  string
 	cache      *lru.Cache
 	grpcServer *grpc.Server
 	listener   net.Listener
