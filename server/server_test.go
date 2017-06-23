@@ -27,7 +27,6 @@ func newLocalListener() net.Listener {
 }
 
 func testSetup(maxEntries int) pb.CacheClient {
-
 	listener := newLocalListener()
 	s2 := NewWithListener(listener, maxEntries)
 	s2.Start()
