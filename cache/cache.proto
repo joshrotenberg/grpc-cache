@@ -3,7 +3,12 @@ syntax = "proto3";
 package cache;
 
 service Cache {
+  // streams cache request/response
+  rpc Stream(stream CacheRequest) returns (stream CacheResponse) {}
+  // single cache request/response
   rpc Call(CacheRequest) returns (CacheResponse) {}
+  // convenience calls for all cache operations. these
+  // just add the Operation and forward on to Call
   rpc Set(CacheRequest) returns (CacheResponse) {}
   rpc Cas(CacheRequest) returns (CacheResponse) {}
   rpc Get(CacheRequest) returns (CacheResponse) {}

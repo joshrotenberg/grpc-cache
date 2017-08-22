@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/joshrotenberg/grpc-cache/lru"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/grpclog"
 	"google.golang.org/grpc/status"
 )
 
@@ -333,4 +335,34 @@ func TestNoop(t *testing.T) {
 	if reflect.DeepEqual(noopResponse.GetItem(), noopItem) != true {
 		t.Fatal("items didn't match")
 	}
+}
+
+func TestStream(t *testing.T) {
+	cc := testSetup(20)
+
+	stream, err := cc.Stream(context.Background())
+	if err != nil {
+		t.Fatalf("error acquiring stream: %v", err)
+	}
+	t.Log(stream)
+	waitc := make(chan struct{})
+	go func() {
+		for {
+			in, err := stream.Recv()
+			if err == io.EOF {
+				// read done.
+				close(waitc)
+				return
+			}
+			if err != nil {
+				grpclog.Fatalf("Failed to receive a note : %v", err)
+			}
+			t.Logf("doof %v", in)
+		}
+	}()
+	
+	setRequest := &pb.CacheRequest{Item: &pb.CacheItem{Key: "foo"}, Operation: pb.CacheRequest_SET}
+	stream.Send(setRequest)
+	stream.CloseSend()
+	<-waitc
 }

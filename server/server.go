@@ -1,6 +1,7 @@
 package server
 
 import (
+	"io"
 	"log"
 	"net"
 	"time"
@@ -77,6 +78,27 @@ func cacheResponse(err error, op pb.CacheRequest_Operation, item *pb.CacheItem) 
 		Item: item,
 	}
 	return response, err
+}
+
+// Stream ...
+func (s *CacheServer) Stream(stream pb.Cache_StreamServer) error {
+	for {
+		in, err := stream.Recv()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		log.Printf("i got %v", in)
+		resp, err := s.Call(stream.Context(), in)
+		if err != nil {
+			return err
+		}
+		if err := stream.Send(resp); err != nil {
+			return err
+		}
+	}
 }
 
 // Call calls the cache operation in in.Operation
