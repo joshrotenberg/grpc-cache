@@ -46,7 +46,7 @@ func New(address string, maxEntries int) (*CacheServer, error) {
 	return NewWithListener(listener, maxEntries), nil
 }
 
-// Start starts the cache server. It takes a host:port string on which to run the server.
+// Start starts the cache server.
 func (s *CacheServer) Start() {
 	go func() {
 		if err := s.grpcServer.Serve(s.listener); err != nil {
