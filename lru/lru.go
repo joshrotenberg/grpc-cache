@@ -104,7 +104,7 @@ type EvictionHandler interface {
 	HandleEviction(key string, value []byte, reason EvictionReason)
 }
 
-// EvictionHandlerFunc is a convenience type for for EvictionHandler
+// EvictionHandlerFunc is a convenience type for EvictionHandler
 // implementations.
 type EvictionHandlerFunc func(key string, value []byte, reason EvictionReason)
 
